@@ -60,9 +60,16 @@ for invoice_no, inv in queue.iterrows():
     rollup = commission.invoice_rollup(line_items, invoice_no)
     with st.container(border=True):
         approved_badge = "✅ approved" if inv["commission_approved"] else "⏳ awaiting approval"
-        if not inv["commission_approved"]:
-            st.checkbox("Select for bulk approval", key=f"bulk_approve_{invoice_no}")
-        st.markdown(f"**{invoice_no}** — {inv['customer']} — _{inv['salesperson']}_ — {approved_badge}")
+        chk_col, title_col = st.columns([0.05, 0.95])
+        with chk_col:
+            if not inv["commission_approved"]:
+                st.checkbox(
+                    f"Select {invoice_no} for bulk approval",
+                    key=f"bulk_approve_{invoice_no}",
+                    label_visibility="collapsed",
+                )
+        with title_col:
+            st.markdown(f"**{invoice_no}** — {inv['customer']} — _{inv['salesperson']}_ — {approved_badge}")
 
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Selling", f"${rollup['selling_total']:,.2f}")

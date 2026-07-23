@@ -71,19 +71,28 @@ for invoice_no, inv in sorted_invoices.iterrows():
     status = statuses.get(invoice_no)
     with st.container(border=True):
         title = f"**{invoice_no}** — {inv['customer']} — {inv['invoice_date']}"
-        if inv["ignored"]:
-            st.markdown(f":gray[{title}]  🚫 *ignored: {inv['ignore_reason']}*")
-            continue
-        elif inv["sales_status"] == "Needs correction":
-            st.markdown(f":red[🔁 {title}  — sent back by finance]")
-            st.error(f"**Finance's note:** {inv['correction_note']}", icon="📝")
-        elif inv["sales_status"] == "Not yet reviewed":
-            st.markdown(f":orange[🆕 {title}  — not yet reviewed]")
-        else:
-            st.markdown(f"✅ {title}  — ready for finance")
+        chk_col, title_col = st.columns([0.05, 0.95])
+        with chk_col:
+            if not inv["ignored"] and inv["sales_status"] != "Ready for finance":
+                st.checkbox(
+                    f"Select {invoice_no} for bulk mark-ready",
+                    key=f"bulk_ready_{me}_{invoice_no}",
+                    label_visibility="collapsed",
+                )
+        with title_col:
+            if inv["ignored"]:
+                st.markdown(f":gray[{title}]  🚫 *ignored: {inv['ignore_reason']}*")
+            elif inv["sales_status"] == "Needs correction":
+                st.markdown(f":red[🔁 {title}  — sent back by finance]")
+            elif inv["sales_status"] == "Not yet reviewed":
+                st.markdown(f":orange[🆕 {title}  — not yet reviewed]")
+            else:
+                st.markdown(f"✅ {title}  — ready for finance")
 
-        if inv["sales_status"] != "Ready for finance":
-            st.checkbox("Select for bulk mark-ready", key=f"bulk_ready_{me}_{invoice_no}")
+        if inv["ignored"]:
+            continue
+        if inv["sales_status"] == "Needs correction":
+            st.error(f"**Finance's note:** {inv['correction_note']}", icon="📝")
 
         if status == "needs_review":
             st.warning(f"Auto-match flagged this one: {inv['notes']}", icon="⚠️")
