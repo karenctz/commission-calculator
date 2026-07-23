@@ -16,7 +16,7 @@ st.caption(
     "get the real cost for margin/commission. Both pieces work together, not as alternatives."
 )
 
-st.subheader("1. Upload the PO/invoice linkage list")
+st.subheader("1. Upload the PO/invoice linkage list (Optional)")
 uploaded = st.file_uploader(
     "PO list or e-invoice tracking export (.xlsx/.csv)",
     type=["xlsx", "csv"],
