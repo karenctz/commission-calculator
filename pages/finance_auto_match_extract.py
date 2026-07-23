@@ -50,7 +50,8 @@ if not st.session_state.get("folder_last_scanned"):
     st.stop()
 
 st.divider()
-st.subheader("2. Matches")
+st.subheader("2. Confirm matches")
+st.caption("Collapsed by default - only invoices needing review open automatically. Expand any others you want to double-check.")
 
 ALL_FILES = [
     "Invoices/INV-S260043.pdf", "Invoices/INV-S260392 - ESAB.pdf",
@@ -98,16 +99,14 @@ st.divider()
 
 for invoice_no, inv in invoices.iterrows():
     status = statuses[invoice_no]
-    with st.container(border=True):
-        header = f"**{invoice_no}** — {inv['customer']} — {inv['invoice_date']} — _{inv['salesperson']}_"
-        if status == "ignored":
-            header = f"🚫 {header}  *ignored*"
-        elif status == "needs_review":
-            header = f":orange[⚠️ {header}  — needs review]"
-        else:
-            header = f"✅ {header}"
-        st.markdown(header)
+    if status == "ignored":
+        header = f"🚫 {invoice_no} — {inv['customer']} — _{inv['salesperson']}_ — ignored"
+    elif status == "needs_review":
+        header = f"⚠️ {invoice_no} — {inv['customer']} — _{inv['salesperson']}_ — needs review"
+    else:
+        header = f"✅ {invoice_no} — {inv['customer']} — _{inv['salesperson']}_"
 
+    with st.expander(header, expanded=(status == "needs_review")):
         c1, c2, c3 = st.columns([2, 2, 1])
         with c1:
             st.selectbox(
@@ -138,56 +137,70 @@ for invoice_no, inv in invoices.iterrows():
             st.info(inv["notes"], icon="ℹ️")
         if inv["ignored"]:
             st.error(f"Ignored: {inv['ignore_reason']}", icon="🚫")
-            continue
 
-        lines = line_items[line_items["invoice_no"] == invoice_no].copy()
-        lines.insert(0, "review", [
-            "⚠️ " + "; ".join(reasons) if (reasons := commission.line_review_flags(r)) else "✅"
-            for r in lines.to_dict("records")
-        ])
-        flagged_before = [r for r in lines.to_dict("records") if r["review"] != "✅"]
+st.divider()
+st.subheader("3. Line items - payout sheet")
+st.caption(
+    "Every active invoice's line items in one editable sheet, spreadsheet-style - select a range "
+    "and copy/paste, or use the fill handle, to set commission % (or cost type/cost) across many "
+    "rows at once. Ignored invoices are left out."
+)
 
-        st.markdown("**Extracted / editable line items**")
-        if flagged_before:
-            st.warning(
-                f"{len(flagged_before)} line item(s) need a manual look: "
-                + "; ".join(f"\"{r['description'][:40]}\" ({r['review'][2:]})" for r in flagged_before),
-                icon="🔎",
-            )
-        edited = st.data_editor(
-            lines.drop(columns=["invoice_no"]),
-            key=f"editor_{invoice_no}",
-            hide_index=True,
-            use_container_width=True,
-            num_rows="dynamic",
-            column_config={
-                "review": st.column_config.TextColumn("⚠ Review", disabled=True, width="small"),
-                "cost_type": st.column_config.SelectboxColumn(options=mock_data.COST_TYPES),
-                "cost_pct_override": st.column_config.NumberColumn(help="Only used for PS cost types; overrides the category default %"),
-                "commission_pct": st.column_config.NumberColumn(format="%.1f%%"),
-                "selling_amount": st.column_config.NumberColumn(disabled=True),
-                "cost_unit_price": st.column_config.NumberColumn(disabled=True),
-                "cost_amount": st.column_config.NumberColumn(disabled=True),
-                "margin_amount": st.column_config.NumberColumn(disabled=True),
-                "margin_pct": st.column_config.NumberColumn(disabled=True, format="%.1f%%"),
-                "commission_amount": st.column_config.NumberColumn(disabled=True),
-            },
-        )
+active_ids = invoices.index[~invoices["ignored"]]
+master = line_items[line_items["invoice_no"].isin(active_ids)].copy()
+master["review"] = [
+    "⚠️ " + "; ".join(reasons) if (reasons := commission.line_review_flags(r)) else "✅"
+    for r in master.to_dict("records")
+]
+master["customer"] = master["invoice_no"].map(invoices["customer"])
+master["salesperson"] = master["invoice_no"].map(invoices["salesperson"])
 
-        recomputed = [commission.recompute_line(r) for r in edited.drop(columns=["review"]).to_dict("records")]
-        for r in recomputed:
-            r["invoice_no"] = invoice_no
-        new_lines = pd.DataFrame(recomputed)
+col_order = [
+    "invoice_no", "salesperson", "customer", "review", "part_no", "description", "qty",
+    "selling_unit_price", "selling_amount", "cost_type", "cost_pct_override", "cost_unit_price",
+    "cost_amount", "margin_amount", "margin_pct", "commission_pct", "commission_amount", "remarks",
+]
+master = master[col_order]
 
-        other_lines = line_items[line_items["invoice_no"] != invoice_no]
-        st.session_state["line_items"] = pd.concat([other_lines, new_lines], ignore_index=True)
+b1, b2 = st.columns([1, 1])
+with b1:
+    bulk_pct = st.number_input("Apply commission % to every row below", min_value=0.0, max_value=100.0, value=10.0, step=0.5)
+with b2:
+    st.write("")
+    st.write("")
+    if st.button("Apply to all rows"):
+        line_items.loc[line_items["invoice_no"].isin(active_ids), "commission_pct"] = bulk_pct
+        st.session_state["line_items"] = line_items
+        st.rerun()
 
-        rollup = commission.invoice_rollup(st.session_state["line_items"], invoice_no)
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Selling total", f"${rollup['selling_total']:,.2f}")
-        m2.metric("Cost total", f"${rollup['cost_total']:,.2f}")
-        m3.metric("Margin (GP)", f"${rollup['margin_total']:,.2f}")
-        m4.metric("Commission", f"${rollup['commission_total']:,.2f}")
+edited_master = st.data_editor(
+    master,
+    key="master_payout_editor",
+    hide_index=True,
+    use_container_width=True,
+    disabled=["invoice_no", "salesperson", "customer", "review", "part_no", "description", "qty",
+              "selling_unit_price"],
+    column_config={
+        "review": st.column_config.TextColumn("⚠ Review", width="small"),
+        "cost_type": st.column_config.SelectboxColumn(options=mock_data.COST_TYPES),
+        "cost_pct_override": st.column_config.NumberColumn(help="Only used for PS cost types; overrides the category default %"),
+        "commission_pct": st.column_config.NumberColumn(format="%.1f%%"),
+        "selling_amount": st.column_config.NumberColumn(disabled=True),
+        "cost_unit_price": st.column_config.NumberColumn(help="Editable for Standard-cost lines once you know the real cost"),
+        "cost_amount": st.column_config.NumberColumn(disabled=True),
+        "margin_amount": st.column_config.NumberColumn(disabled=True),
+        "margin_pct": st.column_config.NumberColumn(disabled=True, format="%.1f%%"),
+        "commission_amount": st.column_config.NumberColumn(disabled=True),
+    },
+)
+
+recomputed = [
+    commission.recompute_line(r)
+    for r in edited_master.drop(columns=["review", "salesperson", "customer"]).to_dict("records")
+]
+new_master = pd.DataFrame(recomputed)
+other_lines = line_items[~line_items["invoice_no"].isin(active_ids)]
+st.session_state["line_items"] = pd.concat([other_lines, new_master], ignore_index=True)
 
 st.divider()
 st.success(
