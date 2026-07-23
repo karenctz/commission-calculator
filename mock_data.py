@@ -220,18 +220,24 @@ def bc_import_preview():
 
 
 def po_list_preview():
-    """Canned 'imported PO list' export and its column mapping."""
+    """Canned preview shaped like Karen's real e-invoice tracking record
+    (see 'E-Inv Records.xlsx') - this is an invoice<->PO/quotation-number
+    linkage + delivery/scan/email tracking sheet, NOT a costed PO list.
+    There's no amount/cost column in the real thing - it just tells you
+    which PO number to go find the PDF for; the actual cost still comes
+    from that PO's PDF via the folder scan."""
     raw = pd.DataFrame([
-        {"PO No": "PO 36002531", "Order Date": "2026-01-15", "Supplier": "Avi-Tech Electronics Pte Ltd", "Cost Amount": 5140.00, "Linked Invoice": "INV-S260043"},
-        {"PO No": "PO-S26070005-KY", "Order Date": "2026-07-02", "Supplier": "Elush (T3) Pte Ltd", "Cost Amount": 21062.00, "Linked Invoice": "INV-S260410"},
-        {"PO No": "PO 36002656-A", "Order Date": "2026-03-20", "Supplier": "8x8 International Pte Ltd", "Cost Amount": 8547.20, "Linked Invoice": "INV-S260159"},
-        {"PO No": "PO-S26060071-JT", "Order Date": "2026-06-25", "Supplier": "Straits Marine Supplies Pte Ltd", "Cost Amount": 2200.00, "Linked Invoice": "INV-S260488"},
+        {"Date of INV": "2026-01-27", "INV #": "INV-S260043", "Quotation / PO#": "PO 36002531", "Delivered": "√", "Scanned": "√", "Emailed": "2026-01-28"},
+        {"Date of INV": "2026-07-10", "INV #": "INV-S260410", "Quotation / PO#": "PO-S26070005-KY", "Delivered": "√", "Scanned": "√", "Emailed": "2026-07-11"},
+        {"Date of INV": "2026-03-27", "INV #": "INV-S260159", "Quotation / PO#": "PO 36002656-A", "Delivered": "√", "Scanned": None, "Emailed": None},
+        {"Date of INV": "2026-06-30", "INV #": "INV-S260488", "Quotation / PO#": "PO-S26060071-JT", "Delivered": "√", "Scanned": "√", "Emailed": "2026-07-01"},
     ])
     mapping = {
-        "PO No": "po_no",
-        "Order Date": "po_date",
-        "Supplier": "supplier",
-        "Cost Amount": "amount",
-        "Linked Invoice": "linked_invoice_no",
+        "Date of INV": "invoice_date",
+        "INV #": "invoice_no",
+        "Quotation / PO#": "po_ref",
+        "Delivered": "delivered",
+        "Scanned": "scanned",
+        "Emailed": "emailed_date",
     }
     return raw, mapping
