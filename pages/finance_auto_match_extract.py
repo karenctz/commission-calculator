@@ -97,7 +97,11 @@ if needs_review_n:
     )
 st.divider()
 
-active_ids = [no for no in invoices.index if not invoices.loc[no, "ignored"]]
+salespeople = sorted(invoices["salesperson"].unique().tolist())
+filter_sp = st.selectbox("Salesperson", options=["All"] + salespeople)
+visible_invoices = invoices if filter_sp == "All" else invoices[invoices["salesperson"] == filter_sp]
+
+active_ids = [no for no in visible_invoices.index if not invoices.loc[no, "ignored"]]
 
 st.subheader("Bulk update commission %")
 st.caption(
@@ -145,7 +149,10 @@ if apply_bulk:
 
 st.divider()
 
-for invoice_no, inv in invoices.iterrows():
+if filter_sp != "All":
+    st.caption(f"Showing {len(visible_invoices)} invoice(s) for **{filter_sp}**.")
+
+for invoice_no, inv in visible_invoices.iterrows():
     status = statuses[invoice_no]
     if status == "ignored":
         header = f"🚫 {invoice_no} — {inv['customer']} — _{inv['salesperson']}_ — ignored"
