@@ -13,12 +13,25 @@ st.caption(
     "but you have a PO export with the numbers. Either source can supply an invoice's cost side."
 )
 
-uploaded = st.file_uploader(
-    "PO list export (.xlsx/.csv)",
-    type=["xlsx", "csv"],
-    key="po_upload",
-)
-use_sample = st.button("Use a sample export instead", help="Prototype shortcut - loads canned mock data")
+t1, t2 = st.tabs(["Upload a PO list export", "Or point to a folder"])
+with t1:
+    uploaded = st.file_uploader(
+        "PO list export (.xlsx/.csv)",
+        type=["xlsx", "csv"],
+        key="po_upload",
+    )
+    use_sample = st.button("Use a sample export instead", help="Prototype shortcut - loads canned mock data")
+with t2:
+    st.caption(
+        "Skip the spreadsheet entirely - just point Auto-Match at a folder of supplier PO PDFs "
+        "and let it scan/extract them directly (this is the same folder scan used for matching "
+        "invoice PDFs, described on Settings)."
+    )
+    st.text_input(
+        "Folder to scan for PO PDFs",
+        placeholder=r"C:\Users\KarenYeung\OneDrive - Cactoz\Commission App\Supplier POs",
+        help="Not actually scanned in this prototype - Auto-Match & Extract's folder scan is what would use this.",
+    )
 
 if uploaded or use_sample:
     raw, mapping = mock_data.po_list_preview()

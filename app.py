@@ -1,67 +1,40 @@
 import streamlit as st
 
-from state import current_role, current_salesperson, ensure_state
+from state import ensure_state
 
 st.set_page_config(page_title="Commission Calculator (Prototype)", layout="wide")
 ensure_state()
 
-st.title("Commission Calculator")
-st.caption(
-    "Prototype - every number on these pages is mock/sample data, nothing is read from or "
-    "written to disk yet. This exists to validate the finance/salesperson workflow and privacy "
-    "boundary before the real PDF-parsing, folder-scanning, and file-exchange logic is built."
-)
+# Sidebar is grouped into Account / Finance / Salesperson so each role's steps
+# are visually separate, in the order they're actually meant to be worked
+# through - not just an alphabetical/flat page list. Individual pages still
+# self-gate via require_finance()/require_salesperson() (see state.py) for a
+# user in the wrong role, since both groups are always shown here rather
+# than being hidden based on the current role.
 
-role = current_role()
-if role == "Finance":
-    st.info("Signed in as **Finance**. You see everyone's invoices, across the stages below.", icon="🗂️")
-else:
-    st.info(
-        f"Signed in as **Salesperson: {current_salesperson()}**. You only ever see your own "
-        "invoices - never anyone else's.",
-        icon="🔒",
-    )
+settings_page = st.Page("pages/settings.py", title="Settings (sign in)", icon=":material/settings:")
 
-with st.container(border=True):
-    st.subheader("0. Settings")
-    st.write("Set your role (Finance, or Salesperson + your name) and root folder.")
-    st.page_link("pages/0_Settings.py", label="Open Settings", icon=":material/settings:")
+finance_pages = [
+    st.Page("pages/finance_import_bc_invoices.py", title="1. Import BC Invoices", icon=":material/upload_file:"),
+    st.Page("pages/finance_import_po_list.py", title="2. Import PO List", icon=":material/upload_file:"),
+    st.Page("pages/finance_auto_match_extract.py", title="3. Auto-Match & Extract", icon=":material/compare_arrows:"),
+    st.Page("pages/finance_export_for_salesperson.py", title="4. Export for Salesperson", icon=":material/outbox:"),
+    st.Page("pages/finance_import_salesperson_updates.py", title="5. Import Salesperson Updates", icon=":material/inbox:"),
+    st.Page("pages/finance_approval.py", title="6. Finance Approval", icon=":material/fact_check:"),
+    st.Page("pages/finance_export.py", title="7. Export Payout Report", icon=":material/download:"),
+]
 
-st.markdown("#### Finance's flow")
-with st.container(border=True):
-    st.subheader("1-2. Import BC Invoices / PO List")
-    st.write("The authoritative invoice list, plus an optional PO list to supplement folder-matched costs.")
-    st.page_link("pages/1_Import_BC_Invoices.py", label="Open Import BC Invoices", icon=":material/upload_file:")
-    st.page_link("pages/2_Import_PO_List.py", label="Open Import PO List", icon=":material/upload_file:")
+salesperson_pages = [
+    st.Page("pages/salesperson_upload_invoice_docs.py", title="1. Upload Invoice Documents", icon=":material/upload_file:"),
+    st.Page("pages/salesperson_upload_po_docs.py", title="2. Upload PO Documents", icon=":material/upload_file:"),
+    st.Page("pages/salesperson_import_finance_report.py", title="3. Import Finance Report", icon=":material/inbox:"),
+    st.Page("pages/salesperson_my_invoices.py", title="4. My Invoices", icon=":material/inventory:"),
+    st.Page("pages/salesperson_export_updates.py", title="5. Export My Updates", icon=":material/outbox:"),
+]
 
-with st.container(border=True):
-    st.subheader("3. Auto-Match & Extract")
-    st.write("First-pass check across everyone - this is what produces the flags salespeople act on next.")
-    st.page_link("pages/3_Auto_Match_and_Extract.py", label="Open Auto-Match & Extract", icon=":material/compare_arrows:")
-
-with st.container(border=True):
-    st.subheader("4. Export for Salesperson")
-    st.write("Send each salesperson a file containing only their own rows - the actual privacy boundary.")
-    st.page_link("pages/4_Export_for_Salesperson.py", label="Open Export for Salesperson", icon=":material/outbox:")
-
-st.markdown("#### Salesperson's flow")
-with st.container(border=True):
-    st.subheader("5. My Invoices")
-    st.write("Import the file Finance sent you, fix flagged items, mark ready, export your updates back.")
-    st.page_link("pages/5_My_Invoices.py", label="Open My Invoices", icon=":material/inventory:")
-
-st.markdown("#### Back to Finance")
-with st.container(border=True):
-    st.subheader("6. Import Salesperson Updates")
-    st.write("Merge a returned file back into the master dataset.")
-    st.page_link("pages/6_Import_Salesperson_Updates.py", label="Open Import Salesperson Updates", icon=":material/inbox:")
-
-with st.container(border=True):
-    st.subheader("7. Finance Approval")
-    st.write("Approve or kick back with a note; separately, mark paid-by-customer and ignore/void.")
-    st.page_link("pages/7_Finance_Approval.py", label="Open Finance Approval", icon=":material/fact_check:")
-
-with st.container(border=True):
-    st.subheader("8. Export")
-    st.write("Download the payout report, scoped to approved + paid, with per-salesperson subtotals.")
-    st.page_link("pages/8_Export.py", label="Open Export", icon=":material/download:")
+pg = st.navigation({
+    "Account": [settings_page],
+    "Finance": finance_pages,
+    "Salesperson": salesperson_pages,
+})
+pg.run()

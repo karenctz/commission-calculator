@@ -6,11 +6,19 @@ from state import ensure_state
 st.set_page_config(page_title="Settings", layout="wide")
 ensure_state()
 
-st.title("Settings")
+st.title("Commission Calculator")
 st.caption(
-    "Prototype - role/name here is self-declared (no real login), same as the real v1 will be. "
-    "It's still what every other page uses to decide what you can see - try switching it and "
-    "watch My Invoices / the Finance pages change."
+    "Prototype - every number on these pages is mock/sample data, nothing is read from or "
+    "written to disk yet. This exists to validate the finance/salesperson workflow and privacy "
+    "boundary before the real PDF-parsing, folder-scanning, and file-exchange logic is built. "
+    "Use the sidebar to move between the **Finance** and **Salesperson** steps, grouped separately."
+)
+
+st.subheader("Settings")
+st.caption(
+    "Role/name here is self-declared (no real login), same as the real v1 will be. It's still "
+    "what every other page uses to decide what you can see - try switching it and watch My "
+    "Invoices / the Finance pages change."
 )
 
 st.subheader("Your role")

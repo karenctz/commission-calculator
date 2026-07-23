@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 
 import commission
-import exchange
 import mock_data
 from state import current_salesperson, ensure_state, require_salesperson
 
@@ -12,35 +11,13 @@ require_salesperson()
 
 me = current_salesperson()
 st.title("My Invoices")
-st.caption(
-    f"Signed in as **{me}**. This page only ever works from a file Finance sent you - it never "
-    "reads the master dataset, so there's nothing here to leak even by accident."
-)
+st.caption(f"Signed in as **{me}**.")
 
 session_key = f"my_invoices_{me}"
 lines_key = f"my_line_items_{me}"
 
 if session_key not in st.session_state:
-    st.subheader("Import my review file")
-    st.write("Load the file Finance sent you (or use the sample below to try this out).")
-    uploaded = st.file_uploader("Your exchange file (.xlsx)", type=["xlsx"], key="my_upload")
-    use_sample = st.button(
-        f"Use a sample file for {me} instead",
-        help="Prototype shortcut - simulates having received and opened Finance's export",
-    )
-    if uploaded:
-        inv, lines = exchange.read_export(uploaded.read())
-        st.session_state[session_key] = inv
-        st.session_state[lines_key] = lines
-        st.rerun()
-    elif use_sample:
-        master_inv = st.session_state["invoices"]
-        master_lines = st.session_state["line_items"]
-        xlsx_bytes = exchange.build_export(master_inv, master_lines, me)
-        inv, lines = exchange.read_export(xlsx_bytes)
-        st.session_state[session_key] = inv
-        st.session_state[lines_key] = lines
-        st.rerun()
+    st.warning("Nothing imported yet - go to **Import Finance Report** first.", icon="📥")
     st.stop()
 
 invoices = st.session_state[session_key]
@@ -55,6 +32,35 @@ s2.metric("Need your attention", len(needing_attention))
 s3.metric("Ready for finance", int((invoices["sales_status"] == "Ready for finance").sum()))
 
 st.divider()
+
+eligible = [
+    no for no, inv in invoices.iterrows()
+    if not inv["ignored"] and inv["sales_status"] != "Ready for finance"
+]
+if eligible:
+    st.subheader("Mark multiple as ready")
+    b1, b2 = st.columns([3, 1])
+    with b1:
+        selected = st.multiselect(
+            "Pick invoices to mark ready for finance at once",
+            options=eligible,
+            format_func=lambda no: f"{no} — {invoices.loc[no, 'customer']}",
+        )
+    with b2:
+        st.write("")
+        st.write("")
+        mark_all = st.button(f"Mark ALL {len(eligible)} as ready")
+    mark_selected = st.button("Mark selected as ready", disabled=not selected)
+
+    to_mark = eligible if mark_all else (selected if mark_selected else [])
+    if to_mark:
+        for no in to_mark:
+            invoices.loc[no, "sales_status"] = "Ready for finance"
+            invoices.loc[no, "correction_note"] = ""
+        st.session_state[session_key] = invoices
+        st.success(f"Marked {len(to_mark)} invoice(s) ready for finance.")
+        st.rerun()
+    st.divider()
 
 order = {"Needs correction": 0, "Not yet reviewed": 1, "Ready for finance": 2}
 sort_rank = invoices["sales_status"].map(lambda s: order.get(s, 3))
@@ -124,17 +130,4 @@ for invoice_no, inv in sorted_invoices.iterrows():
                 st.rerun()
 
 st.divider()
-st.subheader("Export my updates")
-st.caption("Once you're done, download this and send it back to Finance.")
-out_bytes = exchange.write_workbook(st.session_state[session_key], st.session_state[lines_key])
-st.download_button(
-    "Download my updates (.xlsx)",
-    data=out_bytes,
-    file_name=f"{me.replace(' ', '_')}_commission_updates.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-)
-
-if st.button("Start over (discard imported file)"):
-    del st.session_state[session_key]
-    del st.session_state[lines_key]
-    st.rerun()
+st.info("Once you're done, head to **Export My Updates** to send everything back to Finance.", icon="📤")
