@@ -77,8 +77,8 @@ def seed_invoices():
             po_source="unmatched", match_confidence=0.41,
             invoice_pdf_path="Invoices/INV-S260421.pdf", po_pdf_path="",
             sales_status="Needs correction",
-            correction_note="Customer name looks misspelled vs. the source doc, and the cost is still blank - please confirm both before resubmitting.",
-            notes="Low-confidence example, already kicked back once by finance",
+            correction_note="Margin on this line looks off (98% - cost seems too low for this kind of work). Please double-check the cost and recalculate before resubmitting.",
+            notes="Low-confidence example, already sent back once by finance",
         ),
         _invoice(
             invoice_no="CR-S260009", customer="Pan Pacific International Holdings Corporation",

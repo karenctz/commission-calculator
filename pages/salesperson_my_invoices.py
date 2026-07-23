@@ -69,28 +69,38 @@ sorted_invoices = invoices.loc[sort_rank.sort_values().index]
 
 for invoice_no, inv in sorted_invoices.iterrows():
     status = statuses.get(invoice_no)
-    with st.container(border=True):
-        title = f"**{invoice_no}** — {inv['customer']} — {inv['invoice_date']}"
-        chk_col, title_col = st.columns([0.05, 0.95])
-        with chk_col:
-            if not inv["ignored"] and inv["sales_status"] != "Ready for finance":
-                st.checkbox(
-                    f"Select {invoice_no} for bulk mark-ready",
-                    key=f"bulk_ready_{me}_{invoice_no}",
-                    label_visibility="collapsed",
-                )
-        with title_col:
-            if inv["ignored"]:
-                st.markdown(f":gray[{title}]  🚫 *ignored: {inv['ignore_reason']}*")
-            elif inv["sales_status"] == "Needs correction":
-                st.markdown(f":red[🔁 {title}  — sent back by finance]")
-            elif inv["sales_status"] == "Not yet reviewed":
-                st.markdown(f":orange[🆕 {title}  — not yet reviewed]")
-            else:
-                st.markdown(f"✅ {title}  — ready for finance")
+    title = f"**{invoice_no}** — {inv['customer']} — {inv['invoice_date']}"
+    can_act = not inv["ignored"] and inv["sales_status"] != "Ready for finance"
 
+    chk_col, ready_col, title_col = st.columns([0.05, 0.14, 0.81])
+    with chk_col:
+        if can_act:
+            st.checkbox(
+                f"Select {invoice_no} for bulk mark-ready",
+                key=f"bulk_ready_{me}_{invoice_no}",
+                label_visibility="collapsed",
+            )
+    with ready_col:
+        if can_act:
+            if st.button("Mark ready", key=f"ready_{invoice_no}"):
+                invoices.loc[invoice_no, "sales_status"] = "Ready for finance"
+                invoices.loc[invoice_no, "correction_note"] = ""
+                st.session_state[session_key] = invoices
+                st.rerun()
+    with title_col:
         if inv["ignored"]:
-            continue
+            st.markdown(f":gray[{title}]  🚫 *ignored: {inv['ignore_reason']}*")
+        elif inv["sales_status"] == "Needs correction":
+            st.markdown(f":red[{title}  — sent back by finance]")
+        elif inv["sales_status"] == "Not yet reviewed":
+            st.markdown(f":orange[🆕 {title}  — not yet reviewed]")
+        else:
+            st.markdown(f"✅ {title}  — ready for finance")
+
+    if inv["ignored"]:
+        continue
+
+    with st.container(border=True):
         if inv["sales_status"] == "Needs correction":
             st.error(f"**Finance's note:** {inv['correction_note']}", icon="📝")
 
@@ -114,7 +124,7 @@ for invoice_no, inv in sorted_invoices.iterrows():
                 "cost_pct_override": st.column_config.NumberColumn(help="Only used for PS cost types"),
                 "commission_pct": st.column_config.NumberColumn(format="%.1f%%"),
                 "selling_amount": st.column_config.NumberColumn(disabled=True),
-                "cost_unit_price": st.column_config.NumberColumn(disabled=True),
+                "cost_unit_price": st.column_config.NumberColumn(help="Editable for Standard-cost lines once you know the real cost"),
                 "cost_amount": st.column_config.NumberColumn(disabled=True),
                 "margin_amount": st.column_config.NumberColumn(disabled=True),
                 "margin_pct": st.column_config.NumberColumn(disabled=True, format="%.1f%%"),
@@ -129,18 +139,11 @@ for invoice_no, inv in sorted_invoices.iterrows():
         st.session_state[lines_key] = pd.concat([other_lines, new_lines], ignore_index=True)
 
         rollup = commission.invoice_rollup(st.session_state[lines_key], invoice_no)
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3, m4, _spacer = st.columns([1, 1, 1, 1, 4])
         m1.metric("Selling", f"${rollup['selling_total']:,.2f}")
         m2.metric("Cost", f"${rollup['cost_total']:,.2f}")
         m3.metric("Margin", f"${rollup['margin_total']:,.2f}")
         m4.metric("Commission", f"${rollup['commission_total']:,.2f}")
-
-        if inv["sales_status"] != "Ready for finance":
-            if st.button("Mark ready for finance", key=f"ready_{invoice_no}"):
-                invoices.loc[invoice_no, "sales_status"] = "Ready for finance"
-                invoices.loc[invoice_no, "correction_note"] = ""
-                st.session_state[session_key] = invoices
-                st.rerun()
 
 st.divider()
 st.info("Once you're done, head to **Export My Updates** to send everything back to Finance.", icon="📤")

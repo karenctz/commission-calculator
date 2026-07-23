@@ -10,7 +10,7 @@ require_finance()
 st.title("Finance Approval")
 st.caption(
     "Cross-salesperson queue of invoices marked 'Ready for finance'. Approve (commission math "
-    "confirmed correct) or kick back with a note (returns to that salesperson's own queue - "
+    "confirmed correct) or send back to the salesperson with a note (returns to their own queue - "
     "Finance doesn't silently edit their numbers). Paid-by-customer and ignore/void are separate "
     "from approval - an invoice can be approved well before the customer has actually paid."
 )
@@ -109,7 +109,7 @@ for invoice_no, inv in queue.iterrows():
         with title_col:
             st.markdown(f"**{invoice_no}** — {inv['customer']} — _{inv['salesperson']}_ — {approved_badge}")
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4, _spacer = st.columns([1, 1, 1, 1, 4])
         c1.metric("Selling", f"${rollup['selling_total']:,.2f}")
         c2.metric("Cost", f"${rollup['cost_total']:,.2f}")
         c3.metric("GP", f"${rollup['margin_total']:,.2f}")
@@ -121,7 +121,7 @@ for invoice_no, inv in queue.iterrows():
                 use_container_width=True, hide_index=True,
             )
 
-        a1, a2 = st.columns([1, 2])
+        a1, a2, a3 = st.columns([1, 3, 1])
         with a1:
             if not inv["commission_approved"]:
                 if st.button("✅ Approve", key=f"approve_{invoice_no}"):
@@ -130,14 +130,19 @@ for invoice_no, inv in queue.iterrows():
                     st.session_state["invoices"] = invoices
                     st.rerun()
         with a2:
-            note = st.text_input("Kick back with a note", key=f"note_{invoice_no}", placeholder="What needs fixing?")
-            if st.button("🔁 Kick back", key=f"kickback_{invoice_no}", disabled=not note):
+            note = st.text_input(
+                "Note for salesperson", key=f"note_{invoice_no}",
+                placeholder="What needs fixing? (e.g. margin looks off, please recheck cost)",
+                label_visibility="collapsed",
+            )
+        with a3:
+            if st.button("↩️ Send back", key=f"kickback_{invoice_no}", disabled=not note):
                 invoices.loc[invoice_no, "sales_status"] = "Needs correction"
                 invoices.loc[invoice_no, "correction_note"] = note
                 invoices.loc[invoice_no, "commission_approved"] = False
                 invoices.loc[invoice_no, "commission_approved_date"] = None
                 st.session_state["invoices"] = invoices
-                st.success(f"Kicked back to {inv['salesperson']}'s queue with your note.")
+                st.success(f"Sent back to {inv['salesperson']}'s queue with your note.")
                 st.rerun()
 
         p1, p2 = st.columns(2)

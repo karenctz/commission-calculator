@@ -232,7 +232,7 @@ for invoice_no, inv in visible_invoices.iterrows():
                 "cost_pct_override": st.column_config.NumberColumn(help="Only used for PS cost types; overrides the category default %"),
                 "commission_pct": st.column_config.NumberColumn(format="%.1f%%"),
                 "selling_amount": st.column_config.NumberColumn(disabled=True),
-                "cost_unit_price": st.column_config.NumberColumn(disabled=True),
+                "cost_unit_price": st.column_config.NumberColumn(help="Editable for Standard-cost lines once you know the real cost"),
                 "cost_amount": st.column_config.NumberColumn(disabled=True),
                 "margin_amount": st.column_config.NumberColumn(disabled=True),
                 "margin_pct": st.column_config.NumberColumn(disabled=True, format="%.1f%%"),
@@ -249,7 +249,7 @@ for invoice_no, inv in visible_invoices.iterrows():
         st.session_state["line_items"] = pd.concat([other_lines, new_lines], ignore_index=True)
 
         rollup = commission.invoice_rollup(st.session_state["line_items"], invoice_no)
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3, m4, _spacer2 = st.columns([1, 1, 1, 1, 4])
         m1.metric("Selling total", f"${rollup['selling_total']:,.2f}")
         m2.metric("Cost total", f"${rollup['cost_total']:,.2f}")
         m3.metric("Margin (GP)", f"${rollup['margin_total']:,.2f}")
