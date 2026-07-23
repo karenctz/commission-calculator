@@ -35,18 +35,18 @@ if eligible:
     st.caption("Tick the invoices you want below, or select all, then approve them together.")
     b1, b2 = st.columns([1, 1])
     with b1:
-        if st.button(f"☑️ Select all {len(eligible)} eligible"):
+        if st.button(f"☑️ Select all {len(eligible)} eligible", key="approve_select_all"):
             for no in eligible:
                 st.session_state[f"bulk_approve_{no}"] = True
             st.rerun()
     with b2:
-        if st.button("☐ Clear selection"):
+        if st.button("☐ Clear selection", key="approve_clear_selection"):
             for no in eligible:
                 st.session_state[f"bulk_approve_{no}"] = False
             st.rerun()
 
     selected = [no for no in eligible if st.session_state.get(f"bulk_approve_{no}", False)]
-    if st.button(f"✅ Approve selected ({len(selected)})", disabled=not selected, type="primary"):
+    if st.button(f"✅ Approve selected ({len(selected)})", disabled=not selected, type="primary", key="approve_selected_btn"):
         for no in selected:
             invoices.loc[no, "commission_approved"] = True
             invoices.loc[no, "commission_approved_date"] = "2026-07-23"
@@ -56,17 +56,52 @@ if eligible:
         st.rerun()
     st.divider()
 
+paid_eligible = [no for no, inv in queue.iterrows() if not inv["paid_by_customer"]]
+if paid_eligible:
+    st.subheader("Mark paid by customer (multiple)")
+    st.caption("Tick the invoices you want below, or select all, then mark them paid together.")
+    pb1, pb2 = st.columns([1, 1])
+    with pb1:
+        if st.button(f"☑️ Select all {len(paid_eligible)} unpaid", key="paid_select_all"):
+            for no in paid_eligible:
+                st.session_state[f"bulk_paid_{no}"] = True
+            st.rerun()
+    with pb2:
+        if st.button("☐ Clear selection", key="paid_clear_selection"):
+            for no in paid_eligible:
+                st.session_state[f"bulk_paid_{no}"] = False
+            st.rerun()
+
+    paid_selected = [no for no in paid_eligible if st.session_state.get(f"bulk_paid_{no}", False)]
+    if st.button(f"💰 Mark selected paid ({len(paid_selected)})", disabled=not paid_selected, type="primary", key="paid_selected_btn"):
+        for no in paid_selected:
+            invoices.loc[no, "paid_by_customer"] = True
+            st.session_state[f"bulk_paid_{no}"] = False
+        st.session_state["invoices"] = invoices
+        st.success(f"Marked {len(paid_selected)} invoice(s) as paid by customer.")
+        st.rerun()
+    st.divider()
+
 for invoice_no, inv in queue.iterrows():
     rollup = commission.invoice_rollup(line_items, invoice_no)
     with st.container(border=True):
         approved_badge = "✅ approved" if inv["commission_approved"] else "⏳ awaiting approval"
-        chk_col, title_col = st.columns([0.05, 0.95])
-        with chk_col:
+        chk_approve_col, chk_paid_col, title_col = st.columns([0.05, 0.05, 0.90])
+        with chk_approve_col:
             if not inv["commission_approved"]:
                 st.checkbox(
                     f"Select {invoice_no} for bulk approval",
                     key=f"bulk_approve_{invoice_no}",
                     label_visibility="collapsed",
+                    help="Select for bulk approval",
+                )
+        with chk_paid_col:
+            if not inv["paid_by_customer"]:
+                st.checkbox(
+                    f"Select {invoice_no} for bulk paid",
+                    key=f"bulk_paid_{invoice_no}",
+                    label_visibility="collapsed",
+                    help="Select for bulk mark-paid",
                 )
         with title_col:
             st.markdown(f"**{invoice_no}** — {inv['customer']} — _{inv['salesperson']}_ — {approved_badge}")
@@ -102,16 +137,13 @@ for invoice_no, inv in queue.iterrows():
                 st.success(f"Kicked back to {inv['salesperson']}'s queue with your note.")
                 st.rerun()
 
-        p1, p2, p3 = st.columns(3)
+        p1, p2 = st.columns(2)
         with p1:
             paid = st.checkbox("Paid by customer", value=bool(inv["paid_by_customer"]), key=f"paid_{invoice_no}")
         with p2:
-            paid_date = st.text_input("Paid date", value=inv["paid_date"] or "", key=f"paiddate_{invoice_no}")
-        with p3:
             ignored = st.checkbox("Ignore (e.g. voided)", value=bool(inv["ignored"]), key=f"ignore_{invoice_no}")
-        if paid != inv["paid_by_customer"] or paid_date != (inv["paid_date"] or "") or ignored != inv["ignored"]:
+        if paid != inv["paid_by_customer"] or ignored != inv["ignored"]:
             invoices.loc[invoice_no, "paid_by_customer"] = paid
-            invoices.loc[invoice_no, "paid_date"] = paid_date
             invoices.loc[invoice_no, "ignored"] = ignored
             st.session_state["invoices"] = invoices
             st.rerun()
