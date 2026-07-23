@@ -113,6 +113,8 @@ for invoice_no, inv in sorted_invoices.iterrows():
             for r in lines.to_dict("records")
         ])
 
+        summary_slot = st.container()
+
         edited = st.data_editor(
             lines.drop(columns=["invoice_no"]),
             key=f"my_editor_{invoice_no}",
@@ -139,11 +141,12 @@ for invoice_no, inv in sorted_invoices.iterrows():
         st.session_state[lines_key] = pd.concat([other_lines, new_lines], ignore_index=True)
 
         rollup = commission.invoice_rollup(st.session_state[lines_key], invoice_no)
-        m1, m2, m3, m4, _spacer = st.columns([1, 1, 1, 1, 4])
-        m1.metric("Selling", f"${rollup['selling_total']:,.2f}")
-        m2.metric("Cost", f"${rollup['cost_total']:,.2f}")
-        m3.metric("Margin", f"${rollup['margin_total']:,.2f}")
-        m4.metric("Commission", f"${rollup['commission_total']:,.2f}")
+        with summary_slot:
+            m1, m2, m3, m4, _spacer = st.columns([1, 1, 1, 1, 4])
+            m1.markdown(f"**Selling**  \n${rollup['selling_total']:,.2f}")
+            m2.markdown(f"**Cost**  \n${rollup['cost_total']:,.2f}")
+            m3.markdown(f"**Margin**  \n${rollup['margin_total']:,.2f}")
+            m4.markdown(f"**Commission**  \n${rollup['commission_total']:,.2f}")
 
 st.divider()
 st.info("Once you're done, head to **Export My Updates** to send everything back to Finance.", icon="📤")

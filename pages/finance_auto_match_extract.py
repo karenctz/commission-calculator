@@ -213,6 +213,8 @@ for invoice_no, inv in visible_invoices.iterrows():
         ])
         flagged_before = [r for r in lines.to_dict("records") if r["review"] != "✅"]
 
+        summary_slot = st.container()
+
         st.markdown("**Extracted / editable line items**")
         if flagged_before:
             st.warning(
@@ -249,11 +251,12 @@ for invoice_no, inv in visible_invoices.iterrows():
         st.session_state["line_items"] = pd.concat([other_lines, new_lines], ignore_index=True)
 
         rollup = commission.invoice_rollup(st.session_state["line_items"], invoice_no)
-        m1, m2, m3, m4, _spacer2 = st.columns([1, 1, 1, 1, 4])
-        m1.metric("Selling total", f"${rollup['selling_total']:,.2f}")
-        m2.metric("Cost total", f"${rollup['cost_total']:,.2f}")
-        m3.metric("Margin (GP)", f"${rollup['margin_total']:,.2f}")
-        m4.metric("Commission", f"${rollup['commission_total']:,.2f}")
+        with summary_slot:
+            m1, m2, m3, m4, _spacer2 = st.columns([1, 1, 1, 1, 4])
+            m1.markdown(f"**Selling total**  \n${rollup['selling_total']:,.2f}")
+            m2.markdown(f"**Cost total**  \n${rollup['cost_total']:,.2f}")
+            m3.markdown(f"**Margin (GP)**  \n${rollup['margin_total']:,.2f}")
+            m4.markdown(f"**Commission**  \n${rollup['commission_total']:,.2f}")
 
 st.divider()
 st.success(
