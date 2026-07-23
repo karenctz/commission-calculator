@@ -32,26 +32,27 @@ if not len(queue):
 eligible = [no for no, inv in queue.iterrows() if not inv["commission_approved"]]
 if eligible:
     st.subheader("Approve multiple")
-    b1, b2 = st.columns([3, 1])
+    st.caption("Tick the invoices you want below, or select all, then approve them together.")
+    b1, b2 = st.columns([1, 1])
     with b1:
-        selected = st.multiselect(
-            "Pick invoices to approve at once",
-            options=eligible,
-            format_func=lambda no: f"{no} — {queue.loc[no, 'customer']} ({queue.loc[no, 'salesperson']})",
-        )
+        if st.button(f"☑️ Select all {len(eligible)} eligible"):
+            for no in eligible:
+                st.session_state[f"bulk_approve_{no}"] = True
+            st.rerun()
     with b2:
-        st.write("")
-        st.write("")
-        approve_all = st.button(f"Approve ALL {len(eligible)}")
-    approve_selected = st.button("Approve selected", disabled=not selected)
+        if st.button("☐ Clear selection"):
+            for no in eligible:
+                st.session_state[f"bulk_approve_{no}"] = False
+            st.rerun()
 
-    to_approve = eligible if approve_all else (selected if approve_selected else [])
-    if to_approve:
-        for no in to_approve:
+    selected = [no for no in eligible if st.session_state.get(f"bulk_approve_{no}", False)]
+    if st.button(f"✅ Approve selected ({len(selected)})", disabled=not selected, type="primary"):
+        for no in selected:
             invoices.loc[no, "commission_approved"] = True
             invoices.loc[no, "commission_approved_date"] = "2026-07-23"
+            st.session_state[f"bulk_approve_{no}"] = False
         st.session_state["invoices"] = invoices
-        st.success(f"Approved {len(to_approve)} invoice(s).")
+        st.success(f"Approved {len(selected)} invoice(s).")
         st.rerun()
     st.divider()
 
@@ -59,6 +60,8 @@ for invoice_no, inv in queue.iterrows():
     rollup = commission.invoice_rollup(line_items, invoice_no)
     with st.container(border=True):
         approved_badge = "✅ approved" if inv["commission_approved"] else "⏳ awaiting approval"
+        if not inv["commission_approved"]:
+            st.checkbox("Select for bulk approval", key=f"bulk_approve_{invoice_no}")
         st.markdown(f"**{invoice_no}** — {inv['customer']} — _{inv['salesperson']}_ — {approved_badge}")
 
         c1, c2, c3, c4 = st.columns(4)

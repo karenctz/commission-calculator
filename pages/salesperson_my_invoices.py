@@ -39,26 +39,27 @@ eligible = [
 ]
 if eligible:
     st.subheader("Mark multiple as ready")
-    b1, b2 = st.columns([3, 1])
+    st.caption("Tick the invoices below, or select all, then mark them ready together.")
+    b1, b2 = st.columns([1, 1])
     with b1:
-        selected = st.multiselect(
-            "Pick invoices to mark ready for finance at once",
-            options=eligible,
-            format_func=lambda no: f"{no} — {invoices.loc[no, 'customer']}",
-        )
+        if st.button(f"☑️ Select all {len(eligible)}"):
+            for no in eligible:
+                st.session_state[f"bulk_ready_{me}_{no}"] = True
+            st.rerun()
     with b2:
-        st.write("")
-        st.write("")
-        mark_all = st.button(f"Mark ALL {len(eligible)} as ready")
-    mark_selected = st.button("Mark selected as ready", disabled=not selected)
+        if st.button("☐ Clear selection"):
+            for no in eligible:
+                st.session_state[f"bulk_ready_{me}_{no}"] = False
+            st.rerun()
 
-    to_mark = eligible if mark_all else (selected if mark_selected else [])
-    if to_mark:
-        for no in to_mark:
+    selected = [no for no in eligible if st.session_state.get(f"bulk_ready_{me}_{no}", False)]
+    if st.button(f"Mark selected ready for finance ({len(selected)})", disabled=not selected, type="primary"):
+        for no in selected:
             invoices.loc[no, "sales_status"] = "Ready for finance"
             invoices.loc[no, "correction_note"] = ""
+            st.session_state[f"bulk_ready_{me}_{no}"] = False
         st.session_state[session_key] = invoices
-        st.success(f"Marked {len(to_mark)} invoice(s) ready for finance.")
+        st.success(f"Marked {len(selected)} invoice(s) ready for finance.")
         st.rerun()
     st.divider()
 
@@ -80,6 +81,9 @@ for invoice_no, inv in sorted_invoices.iterrows():
             st.markdown(f":orange[🆕 {title}  — not yet reviewed]")
         else:
             st.markdown(f"✅ {title}  — ready for finance")
+
+        if inv["sales_status"] != "Ready for finance":
+            st.checkbox("Select for bulk mark-ready", key=f"bulk_ready_{me}_{invoice_no}")
 
         if status == "needs_review":
             st.warning(f"Auto-match flagged this one: {inv['notes']}", icon="⚠️")
