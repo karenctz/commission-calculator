@@ -154,10 +154,19 @@ for invoice_no, inv in invoices.iterrows():
     else:
         header = f"✅ {invoice_no} — {inv['customer']} — _{inv['salesperson']}_"
 
-    if not inv["ignored"]:
-        st.checkbox("Select for bulk commission update", key=f"bulk_comm_{invoice_no}")
+    chk_col, exp_col = st.columns([0.05, 0.95])
+    with chk_col:
+        st.write("")
+        if not inv["ignored"]:
+            st.checkbox(
+                f"Select {invoice_no} for bulk commission update",
+                key=f"bulk_comm_{invoice_no}",
+                label_visibility="collapsed",
+            )
+    with exp_col:
+        expander_ctx = st.expander(header, expanded=(status == "needs_review"))
 
-    with st.expander(header, expanded=(status == "needs_review")):
+    with expander_ctx:
         c1, c2, c3 = st.columns([2, 2, 1])
         with c1:
             st.selectbox(
