@@ -36,51 +36,53 @@ if eligible or paid_eligible:
     bulk_approve_col, bulk_paid_col = st.columns(2)
     with bulk_approve_col:
         if eligible:
-            st.markdown("**Approve multiple**")
-            r1, r2, r3 = st.columns(3)
-            with r1:
-                if st.button(f"☑️ All {len(eligible)}", key="approve_select_all", help="Select all eligible"):
-                    for no in eligible:
-                        st.session_state[f"bulk_approve_{no}"] = True
-                    st.rerun()
-            with r2:
-                if st.button("☐ Clear", key="approve_clear_selection"):
-                    for no in eligible:
-                        st.session_state[f"bulk_approve_{no}"] = False
-                    st.rerun()
-            selected = [no for no in eligible if st.session_state.get(f"bulk_approve_{no}", False)]
-            with r3:
-                if st.button(f"✅ ({len(selected)})", disabled=not selected, type="primary", key="approve_selected_btn", help="Approve selected"):
-                    for no in selected:
-                        invoices.loc[no, "commission_approved"] = True
-                        invoices.loc[no, "commission_approved_date"] = "2026-07-23"
-                        st.session_state[f"bulk_approve_{no}"] = False
-                    st.session_state["invoices"] = invoices
-                    st.success(f"Approved {len(selected)} invoice(s).")
-                    st.rerun()
+            with st.container(border=True):
+                st.markdown("**Approve multiple**")
+                r1, r2, r3, _spacer = st.columns([1, 1, 1, 3])
+                with r1:
+                    if st.button(f"☑️ All {len(eligible)}", key="approve_select_all", help="Select all eligible"):
+                        for no in eligible:
+                            st.session_state[f"bulk_approve_{no}"] = True
+                        st.rerun()
+                with r2:
+                    if st.button("☐ Clear", key="approve_clear_selection"):
+                        for no in eligible:
+                            st.session_state[f"bulk_approve_{no}"] = False
+                        st.rerun()
+                selected = [no for no in eligible if st.session_state.get(f"bulk_approve_{no}", False)]
+                with r3:
+                    if st.button(f"✅ ({len(selected)})", disabled=not selected, type="primary", key="approve_selected_btn", help="Approve selected"):
+                        for no in selected:
+                            invoices.loc[no, "commission_approved"] = True
+                            invoices.loc[no, "commission_approved_date"] = "2026-07-23"
+                            st.session_state[f"bulk_approve_{no}"] = False
+                        st.session_state["invoices"] = invoices
+                        st.success(f"Approved {len(selected)} invoice(s).")
+                        st.rerun()
     with bulk_paid_col:
         if paid_eligible:
-            st.markdown("**Mark paid by customer**")
-            r1, r2, r3 = st.columns(3)
-            with r1:
-                if st.button(f"☑️ All {len(paid_eligible)}", key="paid_select_all", help="Select all unpaid"):
-                    for no in paid_eligible:
-                        st.session_state[f"bulk_paid_{no}"] = True
-                    st.rerun()
-            with r2:
-                if st.button("☐ Clear", key="paid_clear_selection"):
-                    for no in paid_eligible:
-                        st.session_state[f"bulk_paid_{no}"] = False
-                    st.rerun()
-            paid_selected = [no for no in paid_eligible if st.session_state.get(f"bulk_paid_{no}", False)]
-            with r3:
-                if st.button(f"💰 ({len(paid_selected)})", disabled=not paid_selected, type="primary", key="paid_selected_btn", help="Mark selected paid"):
-                    for no in paid_selected:
-                        invoices.loc[no, "paid_by_customer"] = True
-                        st.session_state[f"bulk_paid_{no}"] = False
-                    st.session_state["invoices"] = invoices
-                    st.success(f"Marked {len(paid_selected)} invoice(s) as paid by customer.")
-                    st.rerun()
+            with st.container(border=True):
+                st.markdown("**Mark paid by customer**")
+                r1, r2, r3, _spacer = st.columns([1, 1, 1, 3])
+                with r1:
+                    if st.button(f"☑️ All {len(paid_eligible)}", key="paid_select_all", help="Select all unpaid"):
+                        for no in paid_eligible:
+                            st.session_state[f"bulk_paid_{no}"] = True
+                        st.rerun()
+                with r2:
+                    if st.button("☐ Clear", key="paid_clear_selection"):
+                        for no in paid_eligible:
+                            st.session_state[f"bulk_paid_{no}"] = False
+                        st.rerun()
+                paid_selected = [no for no in paid_eligible if st.session_state.get(f"bulk_paid_{no}", False)]
+                with r3:
+                    if st.button(f"💰 ({len(paid_selected)})", disabled=not paid_selected, type="primary", key="paid_selected_btn", help="Mark selected paid"):
+                        for no in paid_selected:
+                            invoices.loc[no, "paid_by_customer"] = True
+                            st.session_state[f"bulk_paid_{no}"] = False
+                        st.session_state["invoices"] = invoices
+                        st.success(f"Marked {len(paid_selected)} invoice(s) as paid by customer.")
+                        st.rerun()
     st.divider()
 
 for invoice_no, inv in queue.iterrows():
