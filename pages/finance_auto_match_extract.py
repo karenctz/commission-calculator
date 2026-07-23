@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pandas as pd
 import streamlit as st
 
@@ -15,11 +17,40 @@ st.caption(
     "for its PDF and its supplier PO (from the folder scan or the imported PO list), scores the "
     "match, and lets you confirm or override before extracting/editing line items. This first-pass "
     "check is what produces the flags each salesperson deals with next - it isn't the place to do "
-    "their line-by-line commission work for them. Mock matches below - not real folder scanning yet."
+    "their line-by-line commission work for them."
 )
 
 invoices = st.session_state["invoices"]
 line_items = st.session_state["line_items"]
+
+st.subheader("1. Scan the shared folder")
+st.caption(
+    "The folder is only scanned when you click this - never automatically or in the background, "
+    "and never while a salesperson has the app open."
+)
+sc1, sc2 = st.columns([1, 3])
+with sc1:
+    scan_label = "🔍 Scan folder now" if not st.session_state.get("folder_last_scanned") else "🔄 Rescan folder"
+    if st.button(scan_label, type="primary"):
+        st.session_state["folder_last_scanned"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state["folder_scan_count"] = st.session_state.get("folder_scan_count", 0) + 1
+with sc2:
+    last = st.session_state.get("folder_last_scanned")
+    if last:
+        found = 13  # mock count - Phase 1+ replaces this with folder_index.py's real scan
+        st.success(f"Last scanned {last} - {found} PDF(s) found (scan #{st.session_state['folder_scan_count']}).")
+    else:
+        st.warning(
+            "Folder hasn't been scanned yet this session - click **Scan folder now** to check "
+            "for new/updated invoice and PO PDFs before matching.",
+            icon="📁",
+        )
+
+if not st.session_state.get("folder_last_scanned"):
+    st.stop()
+
+st.divider()
+st.subheader("2. Matches")
 
 ALL_FILES = [
     "Invoices/INV-S260043.pdf", "Invoices/INV-S260392 - ESAB.pdf",

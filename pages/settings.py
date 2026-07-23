@@ -71,8 +71,10 @@ else:
 st.divider()
 st.subheader("What this will do once real")
 st.markdown(
-    "- Recursively scan this folder for PDF invoices/POs/quotes and build a searchable index "
-    "(Finance only - a salesperson's own folder is just for viewing their linked documents)\n"
+    "- Scan this folder for PDF invoices/POs/quotes and build a searchable index - "
+    "**manually, only when Finance clicks \"Scan folder now\" on Auto-Match & Extract.** "
+    "Never automatic, never in the background, never triggered by a salesperson opening the "
+    "app (a salesperson's own folder is just for viewing/uploading their linked documents)\n"
     "- Resolve every invoice/PO link **relative to a salesperson's own folder root** - for "
     "Finance that means `<this folder>/<salesperson name>/...`, matching the real SharePoint "
     "permission structure IT sets up per salesperson\n"
