@@ -1,59 +1,44 @@
-# Commission Calculator — Prototype for Your Feedback
+# Commission app — rough mock-up, want your eyes on it
 
-## What this is for
+Hey — put together a click-through mock-up of the commission tool idea.
+Nothing real in it, all made-up numbers, but I want your take on the flow
+before I actually build it for real.
 
-Right now, commission is tracked in a manual spreadsheet — copying numbers
-off invoices and POs by hand, recalculating margins, and chasing confirmation
-on which invoices have actually been paid before payout. We're building a
-small app to handle this instead: it'll auto-match invoices to their supplier
-POs, calculate margin and commission automatically, and give you a clear
-queue of what needs your approval — across every salesperson, not just one.
+Link: *(paste the Streamlit URL here once deployed)*
 
-**A key design goal:** each salesperson should only ever see their own
-commission, never anyone else's. You'll see everything, across all
-salespeople.
+Quick context in case it's not obvious: right now commission means copying
+numbers off invoices and POs by hand, redoing the margin math, and me
+chasing you to confirm what's actually been paid before payout. This is
+meant to fix that — auto-match invoices to their POs, do the margin/
+commission math automatically, and give you one place to approve everything
+across all the salespeople, not just me. One thing I really wanted from the
+start: a salesperson should never see anyone else's numbers. You'll see
+everyone's, obviously.
 
-## What you're looking at
+## How to poke around it
 
-This is a **click-through mock-up** — every number on it is fake/sample
-data, nothing is connected to real invoices yet. Nothing you do in it saves
-anywhere permanent or affects real records. The point is to get your
-reaction to the **workflow and screens** before we build the real thing
-underneath — much cheaper to change now than after it's wired up to actual
-data.
+Open the link, go to **Settings** first — there's a role switch, start on
+**Finance**. Then work through the Finance tabs top to bottom:
 
-**Link:** *(paste the Streamlit URL here once deployed)*
+- Import BC Invoices → Import PO List → Auto-Match & Extract (the first
+  pass, checking everything against what's on file)
+- Export for Salesperson — this is how a salesperson's file actually gets
+  sent to them, try picking each name and see what they'd get
+- Import Salesperson Updates
+- Finance Approval — this is the one that matters most, try approving an
+  invoice and also try kicking one back with a note
+- Export Payout Report — the actual output you'd use to run payout
 
-## How to try it
+Then flip back to Settings, switch role to Salesperson, try both Karen and
+John, and open My Invoices — you'll notice you only ever see that person's
+stuff, nothing from the other one leaks through.
 
-1. Open the link. On the **Settings** page, you'll see a role switch —
-   start as **Finance** (that's the default).
-2. Click through Finance's side of the flow, in order:
-   - **Import BC Invoices** → **Import PO List** → **Auto-Match & Extract**
-     (this is the first-pass check across everyone)
-   - **Export for Salesperson** (this is how a salesperson's file gets sent
-     to them — pick either salesperson to see what they'd receive)
-   - **Finance Approval** (the main one to react to — try approving an
-     invoice, and try "kick back with a note" on another one)
-   - **Export** (the final payout report — try toggling the salesperson
-     filter and the approved/paid checkboxes)
-3. Then go back to **Settings**, switch role to **Salesperson**, pick a name
-   (try both Karen and John), and open **My Invoices** to see what a
-   salesperson would see — notice it's a completely different set of
-   invoices for each one, and nothing overlaps.
+## What I actually want to know
 
-## What feedback would help most
+- Does Finance Approval feel right, or is a step missing / in the wrong order?
+- Is "kick back with a note" clear, or would you rather handle corrections differently?
+- Approved and paid are two separate things in here — does that match how you actually think about it, or should it just be one?
+- Anything missing from the payout report that you'd actually need for a real run?
+- Anything that just feels off or confusing, even if you can't say why.
 
-- Does the **Finance Approval** flow match how you'd actually want to
-  review and sign off commission — anything missing, or in the wrong order?
-- Is the **"kick back with a note"** flow clear, or would you want to
-  handle corrections differently?
-- Does having **"commission approved"** and **"paid by customer"** as two
-  separate things make sense, or would you rather they be combined?
-- Anything on the final **Export** report that doesn't match what you'd
-  actually need for a payout run (columns, groupings, totals)?
-- Anything confusing, missing, or that just feels like the wrong screen for
-  the job.
-
-No need to be gentle — this is the cheap stage to say "actually, this
-should work differently."
+Don't hold back — this is the cheap stage to tell me it's wrong.
