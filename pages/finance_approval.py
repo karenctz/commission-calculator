@@ -29,6 +29,32 @@ st.subheader(f"Awaiting approval ({len(queue)})")
 if not len(queue):
     st.info("Nothing waiting on Finance right now.")
 
+eligible = [no for no, inv in queue.iterrows() if not inv["commission_approved"]]
+if eligible:
+    st.subheader("Approve multiple")
+    b1, b2 = st.columns([3, 1])
+    with b1:
+        selected = st.multiselect(
+            "Pick invoices to approve at once",
+            options=eligible,
+            format_func=lambda no: f"{no} — {queue.loc[no, 'customer']} ({queue.loc[no, 'salesperson']})",
+        )
+    with b2:
+        st.write("")
+        st.write("")
+        approve_all = st.button(f"Approve ALL {len(eligible)}")
+    approve_selected = st.button("Approve selected", disabled=not selected)
+
+    to_approve = eligible if approve_all else (selected if approve_selected else [])
+    if to_approve:
+        for no in to_approve:
+            invoices.loc[no, "commission_approved"] = True
+            invoices.loc[no, "commission_approved_date"] = "2026-07-23"
+        st.session_state["invoices"] = invoices
+        st.success(f"Approved {len(to_approve)} invoice(s).")
+        st.rerun()
+    st.divider()
+
 for invoice_no, inv in queue.iterrows():
     rollup = commission.invoice_rollup(line_items, invoice_no)
     with st.container(border=True):
