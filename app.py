@@ -15,21 +15,19 @@ ensure_state()
 settings_page = st.Page("pages/settings.py", title="Settings (sign in)", icon=":material/settings:")
 
 finance_pages = [
-    st.Page("pages/finance_import_bc_invoices.py", title="1. Import BC Invoices", icon=":material/upload_file:"),
-    st.Page("pages/finance_import_po_list.py", title="2. Import PO List", icon=":material/upload_file:"),
-    st.Page("pages/finance_auto_match_extract.py", title="3. Auto-Match & Extract", icon=":material/compare_arrows:"),
-    st.Page("pages/finance_export_for_salesperson.py", title="4. Export for Salesperson", icon=":material/outbox:"),
-    st.Page("pages/finance_import_salesperson_updates.py", title="5. Import Salesperson Updates", icon=":material/inbox:"),
-    st.Page("pages/finance_approval.py", title="6. Finance Approval", icon=":material/fact_check:"),
-    st.Page("pages/finance_export.py", title="7. Export Payout Report", icon=":material/download:"),
+    st.Page("pages/finance_import_commission_worksheet.py", title="1. Import Commission Worksheet", icon=":material/upload_file:"),
+    st.Page("pages/finance_import_bc_invoices.py", title="2. Import Sales Invoice List + Scan Invoice PDFs", icon=":material/upload_file:"),
+    st.Page("pages/finance_import_po_list.py", title="3. Import PO List + Scan PO PDFs", icon=":material/upload_file:"),
+    st.Page("pages/finance_auto_match_extract.py", title="4. Auto-Match & Extract (sanity check)", icon=":material/compare_arrows:"),
+    st.Page("pages/finance_export_for_salesperson.py", title="5. Export for Salesperson", icon=":material/outbox:"),
+    st.Page("pages/finance_import_salesperson_updates.py", title="6. Import Salesperson Updates", icon=":material/inbox:"),
+    st.Page("pages/finance_approval.py", title="7. Finance Approval", icon=":material/fact_check:"),
+    st.Page("pages/finance_export.py", title="8. Export Payout Report", icon=":material/download:"),
 ]
 
 salesperson_pages = [
-    st.Page("pages/salesperson_upload_invoice_docs.py", title="1. Upload Invoice Documents", icon=":material/upload_file:"),
-    st.Page("pages/salesperson_upload_po_docs.py", title="2. Upload PO Documents", icon=":material/upload_file:"),
-    st.Page("pages/salesperson_import_finance_report.py", title="3. Import Finance Report", icon=":material/inbox:"),
-    st.Page("pages/salesperson_my_invoices.py", title="4. My Invoices", icon=":material/inventory:"),
-    st.Page("pages/salesperson_export_updates.py", title="5. Export My Updates", icon=":material/outbox:"),
+    st.Page("pages/salesperson_my_invoices.py", title="1. My Invoices", icon=":material/inventory:"),
+    st.Page("pages/salesperson_export_updates.py", title="2. Export My Updates", icon=":material/outbox:"),
 ]
 
 pg = st.navigation({

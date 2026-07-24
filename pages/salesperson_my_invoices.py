@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 import commission
+import exchange
 import mock_data
 from state import current_salesperson, ensure_state, require_salesperson
 
@@ -17,8 +18,43 @@ session_key = f"my_invoices_{me}"
 lines_key = f"my_line_items_{me}"
 
 if session_key not in st.session_state:
-    st.warning("Nothing imported yet - go to **Import Finance Report** first.", icon="📥")
+    st.subheader("1. Import Finance's report")
+    st.caption(
+        "Load the exchange file Finance sent you - this becomes your whole working session "
+        "below. This never reads Finance's master dataset, so there's nothing here to leak "
+        "even by accident."
+    )
+    uploaded = st.file_uploader("Your exchange file (.xlsx)", type=["xlsx"], key="my_upload")
+    use_sample = st.button(
+        f"Use a sample file for {me} instead",
+        help="Prototype shortcut - simulates having received and opened Finance's export",
+    )
+    if uploaded:
+        inv, lines = exchange.read_export(uploaded.read())
+        st.session_state[session_key] = inv
+        st.session_state[lines_key] = lines
+        st.rerun()
+    elif use_sample:
+        master_inv = st.session_state["invoices"]
+        master_lines = st.session_state["line_items"]
+        xlsx_bytes = exchange.build_export(master_inv, master_lines, me)
+        inv, lines = exchange.read_export(xlsx_bytes)
+        st.session_state[session_key] = inv
+        st.session_state[lines_key] = lines
+        st.rerun()
+    else:
+        st.info("Upload the file (or click the sample button) to see your invoices below.")
     st.stop()
+
+st.subheader("2. Review your invoices")
+top_cap, top_btn = st.columns([5, 1])
+with top_cap:
+    st.caption(f"{len(st.session_state[session_key])} invoice(s) loaded from Finance's report.")
+with top_btn:
+    if st.button("↺ Start over", help="Discard the imported file and import a different one"):
+        del st.session_state[session_key]
+        del st.session_state[lines_key]
+        st.rerun()
 
 invoices = st.session_state[session_key]
 line_items = st.session_state[lines_key]
@@ -69,10 +105,29 @@ sorted_invoices = invoices.loc[sort_rank.sort_values().index]
 
 for invoice_no, inv in sorted_invoices.iterrows():
     status = statuses.get(invoice_no)
-    title = f"**{invoice_no}** — {inv['customer']} — {inv['invoice_date']}"
     can_act = not inv["ignored"] and inv["sales_status"] != "Ready for finance"
 
-    chk_col, ready_col, title_col = st.columns([0.05, 0.14, 0.81])
+    if inv["ignored"]:
+        title = f"🚫 **{invoice_no}** — {inv['customer']} — {inv['invoice_date']} — ignored: {inv['ignore_reason']}"
+    elif inv["sales_status"] == "Needs correction":
+        title = f"🔴 **{invoice_no}** — {inv['customer']} — {inv['invoice_date']} — sent back by finance"
+    elif inv["sales_status"] == "Not yet reviewed":
+        title = f"🆕 **{invoice_no}** — {inv['customer']} — {inv['invoice_date']} — not yet reviewed"
+    else:
+        title = f"✅ **{invoice_no}** — {inv['customer']} — {inv['invoice_date']} — ready for finance"
+
+    lines = line_items[line_items["invoice_no"] == invoice_no].copy()
+    lines.insert(0, "review", [
+        "⚠️ " + "; ".join(reasons) if (reasons := commission.line_review_flags(r)) else "✅"
+        for r in lines.to_dict("records")
+    ])
+    has_issues = (
+        inv["sales_status"] == "Needs correction"
+        or status == "needs_review"
+        or (lines["review"] != "✅").any()
+    )
+
+    chk_col, ready_col, exp_col = st.columns([0.05, 0.14, 0.81])
     with chk_col:
         if can_act:
             st.checkbox(
@@ -87,31 +142,21 @@ for invoice_no, inv in sorted_invoices.iterrows():
                 invoices.loc[invoice_no, "correction_note"] = ""
                 st.session_state[session_key] = invoices
                 st.rerun()
-    with title_col:
+    with exp_col:
         if inv["ignored"]:
-            st.markdown(f":gray[{title}]  🚫 *ignored: {inv['ignore_reason']}*")
-        elif inv["sales_status"] == "Needs correction":
-            st.markdown(f":red[{title}  — sent back by finance]")
-        elif inv["sales_status"] == "Not yet reviewed":
-            st.markdown(f":orange[🆕 {title}  — not yet reviewed]")
+            st.markdown(f":gray[{title}]")
         else:
-            st.markdown(f"✅ {title}  — ready for finance")
+            expander_ctx = st.expander(title, expanded=has_issues)
 
     if inv["ignored"]:
         continue
 
-    with st.container(border=True):
+    with expander_ctx:
         if inv["sales_status"] == "Needs correction":
             st.error(f"**Finance's note:** {inv['correction_note']}", icon="📝")
 
         if status == "needs_review":
             st.warning(f"Auto-match flagged this one: {inv['notes']}", icon="⚠️")
-
-        lines = line_items[line_items["invoice_no"] == invoice_no].copy()
-        lines.insert(0, "review", [
-            "⚠️ " + "; ".join(reasons) if (reasons := commission.line_review_flags(r)) else "✅"
-            for r in lines.to_dict("records")
-        ])
 
         summary_slot = st.container()
 

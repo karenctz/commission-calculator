@@ -52,34 +52,18 @@ else:
     )
 
 st.divider()
-root = st.text_input(
-    "Your root folder (your OneDrive/SharePoint sync, or any local folder)",
-    value=st.session_state["root_folder"],
-    placeholder=r"C:\Users\KarenYeung\OneDrive - Cactoz\Commission App\Karen Yeung"
-                if role == "Salesperson" else
-                r"C:\Users\KarenYeung\OneDrive - Cactoz\Commission App",
-    help="Salesperson: your own single SharePoint-permissioned folder. "
-         "Finance: the parent folder with one subfolder per salesperson.",
-)
-st.session_state["root_folder"] = root
-
-if root:
-    st.success(f"Pointed at: `{root}` (not actually scanned in this prototype)")
-else:
-    st.warning("No folder set yet - the real app would refuse to scan/match until this is set.")
-
-st.divider()
 st.subheader("What this will do once real")
 st.markdown(
-    "- Scan this folder for PDF invoices/POs/quotes and build a searchable index - "
-    "**manually, only when Finance clicks \"Scan folder now\" on Auto-Match & Extract.** "
-    "Never automatic, never in the background, never triggered by a salesperson opening the "
-    "app (a salesperson's own folder is just for viewing/uploading their linked documents)\n"
-    "- Resolve every invoice/PO link **relative to a salesperson's own folder root** - for "
-    "Finance that means `<this folder>/<salesperson name>/...`, matching the real SharePoint "
-    "permission structure IT sets up per salesperson\n"
+    "- Scan for PDF invoices/POs and build a searchable index - **manually, only when Finance "
+    "clicks \"Scan folder now\" on Import Sales Invoice List / Import PO List.** Never automatic, "
+    "never in the background, never triggered by a salesperson opening the app (a salesperson's "
+    "own folder is just for viewing their linked documents as a sanity check - salespeople don't "
+    "need to upload invoice/PO PDFs themselves)\n"
+    "- Resolve every invoice/PO link **relative to a salesperson's own folder root**, matching "
+    "the real SharePoint permission structure IT sets up per salesperson - each import page "
+    "handles this scan itself now rather than a shared folder setting here\n"
     "- Structured data (invoices/line items) does **not** sync through this folder at all - it "
     "moves as an explicit exported/imported file between Finance and each salesperson (see "
     "Export for Salesperson / Import Salesperson Updates) - that's the actual privacy boundary, "
-    "not this folder setting"
+    "not any folder setting"
 )

@@ -56,6 +56,19 @@ def recompute_line(row):
     return row
 
 
+def confidence_badge(score):
+    """Shared formatting for a document-link (or other) confidence score -
+    used by both the Import Sales Invoice List and Import PO List pages'
+    folder-scan sections, and by Auto-Match & Extract's summary."""
+    if score is None or pd.isna(score):
+        return "⚪ n/a"
+    if score >= 0.85:
+        return f"🟢 {score:.0%}"
+    if score >= 0.6:
+        return f"🟡 {score:.0%}"
+    return f"🔴 {score:.0%}"
+
+
 def invoice_rollup(line_items_df, invoice_no):
     lines = line_items_df[line_items_df["invoice_no"] == invoice_no]
     return dict(

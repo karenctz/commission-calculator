@@ -24,8 +24,6 @@ def ensure_state():
         st.session_state["invoices"] = mock_data.seed_invoices()
     if "line_items" not in st.session_state:
         st.session_state["line_items"] = mock_data.seed_line_items()
-    if "root_folder" not in st.session_state:
-        st.session_state["root_folder"] = ""
     if "bc_imported" not in st.session_state:
         st.session_state["bc_imported"] = False
     if "po_list_imported" not in st.session_state:

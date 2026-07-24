@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pandas as pd
 import streamlit as st
 
@@ -13,70 +11,18 @@ require_finance()
 
 st.title("Auto-Match & Extract")
 st.caption(
-    "Finance only. For each imported invoice, across every salesperson at once: the app looks "
-    "for its PDF and its supplier PO (from the folder scan or the imported PO list), scores the "
-    "match, and lets you confirm or override before extracting/editing line items. This first-pass "
-    "check is what produces the flags each salesperson deals with next - it isn't the place to do "
-    "their line-by-line commission work for them."
+    "Finance only. Line items here already come from the imported Sales Commission Worksheet, "
+    "and invoice/supplier-PO PDFs were already linked back in **Import Sales Invoice List** and "
+    "**Import PO List** - this page doesn't scan or match anything itself anymore. What it does: "
+    "across every salesperson at once, review those linked documents (as a sanity check "
+    "alongside the worksheet's own direct BC record link) and review/edit the worksheet-sourced "
+    "line items before they go to each salesperson. This first-pass check is what produces the "
+    "flags each salesperson deals with next - it isn't the place to do their line-by-line "
+    "commission work for them."
 )
 
 invoices = st.session_state["invoices"]
 line_items = st.session_state["line_items"]
-
-st.subheader("1. Scan the shared folder")
-st.caption(
-    "The folder is only scanned when you click this - never automatically or in the background, "
-    "and never while a salesperson has the app open."
-)
-sc1, sc2 = st.columns([1, 3])
-with sc1:
-    scan_label = "🔍 Scan folder now" if not st.session_state.get("folder_last_scanned") else "🔄 Rescan folder"
-    if st.button(scan_label, type="primary"):
-        st.session_state["folder_last_scanned"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        st.session_state["folder_scan_count"] = st.session_state.get("folder_scan_count", 0) + 1
-with sc2:
-    last = st.session_state.get("folder_last_scanned")
-    if last:
-        found = 13  # mock count - Phase 1+ replaces this with folder_index.py's real scan
-        st.success(f"Last scanned {last} - {found} PDF(s) found (scan #{st.session_state['folder_scan_count']}).")
-    else:
-        st.warning(
-            "Folder hasn't been scanned yet this session - click **Scan folder now** to check "
-            "for new/updated invoice and PO PDFs before matching.",
-            icon="📁",
-        )
-
-if not st.session_state.get("folder_last_scanned"):
-    st.stop()
-
-st.divider()
-st.subheader("2. Confirm matches")
-st.caption("Collapsed by default - only invoices needing review open automatically. Expand any others you want to double-check.")
-
-ALL_FILES = [
-    "Invoices/INV-S260043.pdf", "Invoices/INV-S260392 - ESAB.pdf",
-    "Invoices/INV-S260410 - TechNova.pdf", "Invoices/INV-S260421.pdf",
-    "Invoices/CR-S260009.pdf", "Invoices/INV-S260159.pdf",
-    "Invoices/INV-S260500 - Straits Marine.pdf", "Invoices/INV-S260510 - Nordic.pdf",
-    "Invoices/INV-S260488 - Straits Marine.pdf",
-    "Supplier POs/PO-S26070005-KY_R2 - Elush.pdf", "Supplier POs/PO 36002531.pdf",
-    "Supplier POs/PO 36002656-A.pdf", "Supplier POs/PO-S26070080-JT.pdf",
-    "Quotes/QUO-S260201 - unrelated.pdf",
-    "(no PO match)",
-]
-INVOICE_FILES = ALL_FILES[:9]
-PO_FILES = ALL_FILES[9:14]
-
-
-def confidence_badge(score):
-    if score is None or pd.isna(score):
-        return "⚪ n/a"
-    if score >= 0.85:
-        return f"🟢 {score:.0%}"
-    if score >= 0.6:
-        return f"🟡 {score:.0%}"
-    return f"🔴 {score:.0%}"
-
 
 statuses = {no: commission.invoice_status(inv) for no, inv in invoices.iterrows()}
 total_n = len(invoices)
@@ -176,28 +122,28 @@ for invoice_no, inv in visible_invoices.iterrows():
     with expander_ctx:
         c1, c2, c3 = st.columns([2, 2, 1])
         with c1:
-            st.selectbox(
-                "Matched invoice PDF",
-                options=INVOICE_FILES,
-                index=INVOICE_FILES.index(inv["invoice_pdf_path"]) if inv["invoice_pdf_path"] in INVOICE_FILES else 0,
-                key=f"inv_pdf_{invoice_no}",
+            st.text_input(
+                "Invoice PDF (sanity check)",
+                value=inv["invoice_pdf_path"] or "(not linked yet)",
+                disabled=True,
+                key=f"inv_pdf_display_{invoice_no}",
+                help="Linked in Import Sales Invoice List's folder scan - reference only, doesn't drive cost.",
             )
         with c2:
-            po_options = ["(no PO match)"] + PO_FILES
-            current_po = inv["po_pdf_path"] if inv["po_pdf_path"] else "(no PO match)"
-            st.selectbox(
-                "Matched supplier PO",
-                options=po_options,
-                index=po_options.index(current_po) if current_po in po_options else 0,
-                key=f"po_pdf_{invoice_no}",
+            st.text_input(
+                "Supplier PO PDF (sanity check)",
+                value=inv["po_pdf_path"] or "(no PO match)",
+                disabled=True,
+                key=f"po_pdf_display_{invoice_no}",
+                help="Linked in Import PO List's folder scan. Reference only, and only exists for Standard-cost lines - PS lines have no PO by design.",
             )
         with c3:
-            st.metric("Match confidence", confidence_badge(inv["match_confidence"]))
+            st.metric("Doc-link confidence", commission.confidence_badge(inv["match_confidence"]))
 
         if pd.notna(inv["match_confidence"]) and inv["match_confidence"] < 0.6:
             st.warning(
-                f"Low-confidence match ({inv['notes']}). Confirm the dropdowns above are correct "
-                "before extracting line items.",
+                f"Low-confidence document link ({inv['notes']}). Go back to **Import Sales "
+                "Invoice List** / **Import PO List** to fix the linked PDF if it's wrong.",
                 icon="⚠️",
             )
         if inv["notes"] and pd.isna(inv["match_confidence"]) and not inv["ignored"]:
@@ -215,7 +161,7 @@ for invoice_no, inv in visible_invoices.iterrows():
 
         summary_slot = st.container()
 
-        st.markdown("**Extracted / editable line items**")
+        st.markdown("**Line items from the Commission Worksheet (editable)**")
         if flagged_before:
             st.warning(
                 f"{len(flagged_before)} line item(s) need a manual look: "

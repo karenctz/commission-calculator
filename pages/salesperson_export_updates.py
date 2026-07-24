@@ -16,7 +16,7 @@ session_key = f"my_invoices_{me}"
 lines_key = f"my_line_items_{me}"
 
 if session_key not in st.session_state:
-    st.warning("Nothing imported yet - go to **Import Finance Report** first.", icon="📥")
+    st.warning("Nothing imported yet - go to **My Invoices** first to import Finance's report.", icon="📥")
     st.stop()
 
 invoices = st.session_state[session_key]
