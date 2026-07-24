@@ -204,14 +204,14 @@ def _line(invoice_no, line_no, part_no, description, qty, sell_unit, cost_type,
           cost_unit=None, cost_pct_override=None, commission_pct=10.0, remarks="",
           wht_pct=0.0):
     selling_amount = round(qty * sell_unit, 2)
+    wht_amount = round(selling_amount * wht_pct / 100, 2)
+    net_selling_amount = round(selling_amount - wht_amount, 2)
     if cost_type == "Standard":
         cost_amount = round(qty * (cost_unit or 0), 2)
     else:
         pct = cost_pct_override if cost_pct_override is not None else COST_TYPE_DEFAULT_PCT[cost_type]
-        cost_amount = round(selling_amount * pct / 100, 2)
+        cost_amount = round(net_selling_amount * pct / 100, 2)
         cost_unit = round(cost_amount / qty, 2) if qty else 0
-    wht_amount = round(selling_amount * wht_pct / 100, 2)
-    net_selling_amount = round(selling_amount - wht_amount, 2)
     margin_amount = round(net_selling_amount - cost_amount, 2)
     margin_pct = round(margin_amount / selling_amount * 100, 2) if selling_amount else 0
     commission_amount = round(margin_amount * commission_pct / 100, 2)

@@ -26,16 +26,28 @@ def recompute_line(row):
     PS lines) or cost_unit_price (for Standard lines), and commission_pct.
 
     Withholding tax (Thailand/Taiwan customers) is deducted from the gross
-    selling amount before margin is computed - Cactoz never actually
-    receives the WHT-withheld portion, so commission can't be calculated
-    on it. `wht_pct` defaults from the customer name via
+    selling amount before anything else - Cactoz never actually receives
+    the WHT-withheld portion. `wht_pct` defaults from the customer name via
     `wht_rate_for_customer` if not already set on the row (e.g. a freshly
     imported line), but stays editable/overridable per line same as
-    cost_type - the country match is just a keyword guess."""
+    cost_type - the country match is just a keyword guess.
+
+    For a percentage-based (PS) cost type, the 30%/70% split is applied to
+    that net-of-WHT amount, not the gross - the cost is a share of what
+    Cactoz actually gets paid, not of the invoice's face value. A
+    Standard-cost line is unaffected either way: its cost is a real dollar
+    figure (qty x cost_unit_price), not a percentage of the selling amount."""
     row = dict(row)
     qty = _num(row.get("qty"))
     sell_unit = _num(row.get("selling_unit_price"))
     selling_amount = round(qty * sell_unit, 2)
+
+    wht_pct = row.get("wht_pct")
+    if wht_pct is None or (isinstance(wht_pct, float) and pd.isna(wht_pct)):
+        wht_pct = wht_rate_for_customer(row.get("customer"))
+    wht_pct = _num(wht_pct)
+    wht_amount = round(selling_amount * wht_pct / 100, 2)
+    net_selling_amount = round(selling_amount - wht_amount, 2)
 
     if row.get("cost_type") == "Standard":
         cost_unit = _num(row.get("cost_unit_price"))
@@ -44,16 +56,9 @@ def recompute_line(row):
         pct = row.get("cost_pct_override")
         if pct is None or (isinstance(pct, float) and pd.isna(pct)):
             pct = COST_TYPE_DEFAULT_PCT.get(row.get("cost_type"), 0)
-        cost_amount = round(selling_amount * pct / 100, 2)
+        cost_amount = round(net_selling_amount * pct / 100, 2)
         cost_unit = round(cost_amount / qty, 2) if qty else 0
         row["cost_pct_override"] = pct
-
-    wht_pct = row.get("wht_pct")
-    if wht_pct is None or (isinstance(wht_pct, float) and pd.isna(wht_pct)):
-        wht_pct = wht_rate_for_customer(row.get("customer"))
-    wht_pct = _num(wht_pct)
-    wht_amount = round(selling_amount * wht_pct / 100, 2)
-    net_selling_amount = round(selling_amount - wht_amount, 2)
 
     margin_amount = round(net_selling_amount - cost_amount, 2)
     margin_pct = round(margin_amount / selling_amount * 100, 2) if selling_amount else 0.0
