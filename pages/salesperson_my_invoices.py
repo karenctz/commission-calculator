@@ -173,6 +173,8 @@ for invoice_no, inv in sorted_invoices.iterrows():
                 "selling_amount": st.column_config.NumberColumn(disabled=True),
                 "cost_unit_price": st.column_config.NumberColumn(help="Editable for Standard-cost lines once you know the real cost"),
                 "cost_amount": st.column_config.NumberColumn(disabled=True),
+                "wht_pct": st.column_config.NumberColumn("WHT %", format="%.0f%%", help="Withholding tax - auto-set for Thailand (5%) / Taiwan (20%) customers, deducted before margin/commission. Verify before marking ready."),
+                "wht_amount": st.column_config.NumberColumn("WHT Amt", disabled=True),
                 "margin_amount": st.column_config.NumberColumn(disabled=True),
                 "margin_pct": st.column_config.NumberColumn(disabled=True, format="%.1f%%"),
                 "commission_amount": st.column_config.NumberColumn(disabled=True),
@@ -187,7 +189,11 @@ for invoice_no, inv in sorted_invoices.iterrows():
 
         rollup = commission.invoice_rollup(st.session_state[lines_key], invoice_no)
         with summary_slot:
-            m1, m2, m3, m4, _spacer = st.columns([1, 1, 1, 1, 4])
+            if rollup["wht_total"]:
+                m1, m2, m3, m4, m5, _spacer = st.columns([1, 1, 1, 1, 1, 3])
+                m5.markdown(f"**WHT**  \n${rollup['wht_total']:,.2f}")
+            else:
+                m1, m2, m3, m4, _spacer = st.columns([1, 1, 1, 1, 4])
             m1.markdown(f"**Selling**  \n${rollup['selling_total']:,.2f}")
             m2.markdown(f"**Cost**  \n${rollup['cost_total']:,.2f}")
             m3.markdown(f"**Margin**  \n${rollup['margin_total']:,.2f}")

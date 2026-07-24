@@ -35,6 +35,29 @@ SALESPEOPLE = ["Karen Yeung", "Joen Tan"]
 
 SALES_STATUSES = ["Not yet reviewed", "Ready for finance", "Needs correction"]
 
+# Withholding tax: Thailand and Taiwan customers have WHT deducted from the
+# invoiced amount before Cactoz actually gets paid - e.g. a THB 155.63
+# invoice with 5% WHT is really only 147.85 received. Commission has to be
+# calculated on that net-of-WHT figure, not the gross invoiced amount
+# (confirmed with Karen - the historical spreadsheet missed this, which is
+# why INV-S250442 is the example that surfaced it). Auto-detected from the
+# customer name so nobody has to remember to apply it by hand, but every
+# WHT-affected line still gets flagged for a manual double-check (see
+# commission.line_review_flags) since the country match is just a keyword
+# guess against the customer name.
+WHT_RATES_BY_COUNTRY = {"Thailand": 5.0, "Taiwan": 20.0}
+
+
+def wht_rate_for_customer(customer_name):
+    """Best-effort country detection from the customer name alone (no
+    dedicated country field in any of the 3 real BC exports) - keyword
+    match against WHT_RATES_BY_COUNTRY. Returns 0.0 for anyone else."""
+    name = (customer_name or "").lower()
+    for country, rate in WHT_RATES_BY_COUNTRY.items():
+        if country.lower() in name:
+            return rate
+    return 0.0
+
 # Canned "what's in the shared SharePoint folder" listing, used by both the
 # Import Sales Invoice List page (invoice-PDF scan) and the Import PO List
 # page (PO-PDF scan) - these PDFs are sanity-check reference links now, not
@@ -122,6 +145,26 @@ def seed_invoices():
             commission_approved=True, commission_approved_date="2026-04-05",
             paid_by_customer=True, paid_date="2026-04-20",
         ),
+        # --- WHT examples (real historical invoices - the same
+        # INV-S250442 Karen flagged as missing WHT in the old spreadsheet) ---
+        _invoice(
+            invoice_no="INV-S250442", customer="DONKI (Thailand) Co., Ltd.",
+            invoice_date="2025-08-21", po_ref="",
+            po_source="none (professional service)", match_confidence=None,
+            invoice_pdf_path="Invoices/INV-S250442 - PPRM TH.pdf", po_pdf_path="",
+            sales_status="Ready for finance",
+            paid_by_customer=True, paid_date="2025-09-10",
+            notes="Thailand customer - 5% WHT auto-applied, needs a manual double-check before approving",
+        ),
+        _invoice(
+            invoice_no="INV-S250352", customer="Taiwan Pan Pacific Retail Management Co., Ltd",
+            invoice_date="2025-07-04", po_ref="",
+            po_source="none (professional service)", match_confidence=None,
+            invoice_pdf_path="", po_pdf_path="",
+            sales_status="Ready for finance",
+            paid_by_customer=True, paid_date="2025-07-28",
+            notes="Taiwan customer - 20% WHT auto-applied, needs a manual double-check before approving",
+        ),
         # --- Joen Tan --- (synthesized, proves salesperson isolation;
         # sales person code "JT" matches the real commission worksheet)
         _invoice(
@@ -158,7 +201,8 @@ def seed_invoices():
 
 
 def _line(invoice_no, line_no, part_no, description, qty, sell_unit, cost_type,
-          cost_unit=None, cost_pct_override=None, commission_pct=10.0, remarks=""):
+          cost_unit=None, cost_pct_override=None, commission_pct=10.0, remarks="",
+          wht_pct=0.0):
     selling_amount = round(qty * sell_unit, 2)
     if cost_type == "Standard":
         cost_amount = round(qty * (cost_unit or 0), 2)
@@ -166,7 +210,9 @@ def _line(invoice_no, line_no, part_no, description, qty, sell_unit, cost_type,
         pct = cost_pct_override if cost_pct_override is not None else COST_TYPE_DEFAULT_PCT[cost_type]
         cost_amount = round(selling_amount * pct / 100, 2)
         cost_unit = round(cost_amount / qty, 2) if qty else 0
-    margin_amount = round(selling_amount - cost_amount, 2)
+    wht_amount = round(selling_amount * wht_pct / 100, 2)
+    net_selling_amount = round(selling_amount - wht_amount, 2)
+    margin_amount = round(net_selling_amount - cost_amount, 2)
     margin_pct = round(margin_amount / selling_amount * 100, 2) if selling_amount else 0
     commission_amount = round(margin_amount * commission_pct / 100, 2)
     return dict(
@@ -174,6 +220,7 @@ def _line(invoice_no, line_no, part_no, description, qty, sell_unit, cost_type,
         qty=qty, selling_unit_price=sell_unit, selling_amount=selling_amount,
         cost_type=cost_type, cost_pct_override=cost_pct_override,
         cost_unit_price=cost_unit, cost_amount=cost_amount,
+        wht_pct=wht_pct, wht_amount=wht_amount,
         margin_amount=margin_amount, margin_pct=margin_pct,
         commission_pct=commission_pct, commission_amount=commission_amount,
         remarks=remarks,
@@ -211,6 +258,16 @@ def seed_line_items():
 
     rows.append(_line("INV-S260159", 1, "", "8x8 subscription true-up", 1, 9400, "Standard",
                        cost_unit=8547.20, commission_pct=10))
+
+    # --- WHT examples ---
+    rows.append(_line("INV-S250442", 1, "", "Top Up", 1, 155.63, "Standard",
+                       cost_unit=0, commission_pct=5,
+                       wht_pct=wht_rate_for_customer("DONKI (Thailand) Co., Ltd."),
+                       remarks="Top Up"))
+    rows.append(_line("INV-S250352", 1, "", "PS Downgrade Azure Server Cost", 1, 937.5,
+                       "Infra/HW PS (30% cost)", commission_pct=5,
+                       wht_pct=wht_rate_for_customer("Taiwan Pan Pacific Retail Management Co., Ltd"),
+                       remarks="PS Downgrade Azure Server Cost 30%"))
 
     # --- Joen Tan's line items ---
     rows.append(_line("INV-S260500", 1, "", "Marine radar unit + install", 1, 6200, "Standard",
@@ -300,6 +357,8 @@ def commission_worksheet_preview():
         {"Document number": "INV-S260159", "posting date": "2026-03-27", "sell-to customer name": "8x8 International Pte Ltd", "type": "Item", "no": "LGR", "part number": "8X8-SUB", "description": "8x8 subscription true-up", "qty": 1, "unit price excl. gst": 9400.00, "amount": 9400.00, "invoice remaining amount": 0.00, "unit cost": None, "total cost": 8547.20, "gross profit": 852.80, "commission amount": 85.28, "sales person code": "KY", "sales person": "Karen Yeung", "keyed in by": "KAREN.YEO"},
         {"Document number": "INV-S260500", "posting date": "2026-07-14", "sell-to customer name": "Straits Marine Supplies Pte Ltd", "type": "Item", "no": "HW-ACC", "part number": "MR-RADAR-1", "description": "Marine radar unit + install", "qty": 1, "unit price excl. gst": 6200.00, "amount": 6200.00, "invoice remaining amount": 6758.00, "unit cost": None, "total cost": 4650.00, "gross profit": 1550.00, "commission amount": 124.00, "sales person code": "JT", "sales person": "Joen Tan", "keyed in by": "JOEN.TAN"},
         {"Document number": "INV-S260488", "posting date": "2026-06-30", "sell-to customer name": "Straits Marine Supplies Pte Ltd", "type": "Item", "no": "HW-ACC", "part number": "MR-SAFETY-2", "description": "Marine safety equipment resupply", "qty": 1, "unit price excl. gst": 3100.00, "amount": 3100.00, "invoice remaining amount": 0.00, "unit cost": None, "total cost": 2200.00, "gross profit": 900.00, "commission amount": 72.00, "sales person code": "JT", "sales person": "Joen Tan", "keyed in by": "JOEN.TAN"},
+        {"Document number": "INV-S250442", "posting date": "2025-08-21", "sell-to customer name": "DONKI (Thailand) Co., Ltd.", "type": "Item", "no": "HW", "part number": "", "description": "Top Up", "qty": 1, "unit price excl. gst": 155.63, "amount": 155.63, "invoice remaining amount": 0.00, "unit cost": None, "total cost": 0.00, "gross profit": 155.63, "commission amount": 7.7815, "sales person code": "KY", "sales person": "Karen Yeung", "keyed in by": "KAREN.YEO"},
+        {"Document number": "INV-S250352", "posting date": "2025-07-04", "sell-to customer name": "Taiwan Pan Pacific Retail Management Co., Ltd", "type": "Item", "no": "PS", "part number": "", "description": "PS Downgrade Azure Server Cost", "qty": 1, "unit price excl. gst": 937.5, "amount": 937.5, "invoice remaining amount": 0.00, "unit cost": None, "total cost": 281.25, "gross profit": 656.25, "commission amount": 32.8125, "sales person code": "KY", "sales person": "Karen Yeung", "keyed in by": "KAREN.YEO"},
     ])
     mapping = {
         "Document number": "invoice_no",

@@ -100,9 +100,17 @@ if filter_sp != "All":
 
 for invoice_no, inv in visible_invoices.iterrows():
     status = statuses[invoice_no]
+
+    lines = line_items[line_items["invoice_no"] == invoice_no].copy()
+    lines.insert(0, "review", [
+        "⚠️ " + "; ".join(reasons) if (reasons := commission.line_review_flags(r)) else "✅"
+        for r in lines.to_dict("records")
+    ])
+    has_line_issues = status != "ignored" and (lines["review"] != "✅").any()
+
     if status == "ignored":
         header = f"🚫 {invoice_no} — {inv['customer']} — _{inv['salesperson']}_ — ignored"
-    elif status == "needs_review":
+    elif status == "needs_review" or has_line_issues:
         header = f"⚠️ {invoice_no} — {inv['customer']} — _{inv['salesperson']}_ — needs review"
     else:
         header = f"✅ {invoice_no} — {inv['customer']} — _{inv['salesperson']}_"
@@ -117,7 +125,7 @@ for invoice_no, inv in visible_invoices.iterrows():
                 label_visibility="collapsed",
             )
     with exp_col:
-        expander_ctx = st.expander(header, expanded=(status == "needs_review"))
+        expander_ctx = st.expander(header, expanded=(status == "needs_review" or has_line_issues))
 
     with expander_ctx:
         c1, c2, c3 = st.columns([2, 2, 1])
@@ -152,11 +160,6 @@ for invoice_no, inv in visible_invoices.iterrows():
             st.error(f"Ignored: {inv['ignore_reason']}", icon="🚫")
             continue
 
-        lines = line_items[line_items["invoice_no"] == invoice_no].copy()
-        lines.insert(0, "review", [
-            "⚠️ " + "; ".join(reasons) if (reasons := commission.line_review_flags(r)) else "✅"
-            for r in lines.to_dict("records")
-        ])
         flagged_before = [r for r in lines.to_dict("records") if r["review"] != "✅"]
 
         summary_slot = st.container()
@@ -182,6 +185,8 @@ for invoice_no, inv in visible_invoices.iterrows():
                 "selling_amount": st.column_config.NumberColumn(disabled=True),
                 "cost_unit_price": st.column_config.NumberColumn(help="Editable for Standard-cost lines once you know the real cost"),
                 "cost_amount": st.column_config.NumberColumn(disabled=True),
+                "wht_pct": st.column_config.NumberColumn("WHT %", format="%.0f%%", help="Withholding tax - auto-set for Thailand (5%) / Taiwan (20%) customers, deducted before margin/commission. Verify before approving."),
+                "wht_amount": st.column_config.NumberColumn("WHT Amt", disabled=True),
                 "margin_amount": st.column_config.NumberColumn(disabled=True),
                 "margin_pct": st.column_config.NumberColumn(disabled=True, format="%.1f%%"),
                 "commission_amount": st.column_config.NumberColumn(disabled=True),
@@ -198,7 +203,11 @@ for invoice_no, inv in visible_invoices.iterrows():
 
         rollup = commission.invoice_rollup(st.session_state["line_items"], invoice_no)
         with summary_slot:
-            m1, m2, m3, m4, _spacer2 = st.columns([1, 1, 1, 1, 4])
+            if rollup["wht_total"]:
+                m1, m2, m3, m4, m5, _spacer2 = st.columns([1, 1, 1, 1, 1, 3])
+                m5.markdown(f"**WHT**  \n${rollup['wht_total']:,.2f}")
+            else:
+                m1, m2, m3, m4, _spacer2 = st.columns([1, 1, 1, 1, 4])
             m1.markdown(f"**Selling total**  \n${rollup['selling_total']:,.2f}")
             m2.markdown(f"**Cost total**  \n${rollup['cost_total']:,.2f}")
             m3.markdown(f"**Margin (GP)**  \n${rollup['margin_total']:,.2f}")

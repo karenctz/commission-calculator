@@ -6,7 +6,7 @@ file_store.py/folder_index.py replace mock_data.py in a later phase.
 """
 import pandas as pd
 
-from mock_data import COST_TYPE_DEFAULT_PCT
+from mock_data import COST_TYPE_DEFAULT_PCT, wht_rate_for_customer
 
 
 def _num(value, default=0):
@@ -23,7 +23,15 @@ def _num(value, default=0):
 def recompute_line(row):
     """Takes a line-item dict/Series and returns it with cost/margin/commission
     recomputed from qty, selling_unit_price, cost_type, cost_pct_override (for
-    PS lines) or cost_unit_price (for Standard lines), and commission_pct."""
+    PS lines) or cost_unit_price (for Standard lines), and commission_pct.
+
+    Withholding tax (Thailand/Taiwan customers) is deducted from the gross
+    selling amount before margin is computed - Cactoz never actually
+    receives the WHT-withheld portion, so commission can't be calculated
+    on it. `wht_pct` defaults from the customer name via
+    `wht_rate_for_customer` if not already set on the row (e.g. a freshly
+    imported line), but stays editable/overridable per line same as
+    cost_type - the country match is just a keyword guess."""
     row = dict(row)
     qty = _num(row.get("qty"))
     sell_unit = _num(row.get("selling_unit_price"))
@@ -40,7 +48,14 @@ def recompute_line(row):
         cost_unit = round(cost_amount / qty, 2) if qty else 0
         row["cost_pct_override"] = pct
 
-    margin_amount = round(selling_amount - cost_amount, 2)
+    wht_pct = row.get("wht_pct")
+    if wht_pct is None or (isinstance(wht_pct, float) and pd.isna(wht_pct)):
+        wht_pct = wht_rate_for_customer(row.get("customer"))
+    wht_pct = _num(wht_pct)
+    wht_amount = round(selling_amount * wht_pct / 100, 2)
+    net_selling_amount = round(selling_amount - wht_amount, 2)
+
+    margin_amount = round(net_selling_amount - cost_amount, 2)
     margin_pct = round(margin_amount / selling_amount * 100, 2) if selling_amount else 0.0
     commission_pct = _num(row.get("commission_pct"))
     commission_amount = round(margin_amount * commission_pct / 100, 2)
@@ -49,6 +64,8 @@ def recompute_line(row):
         selling_amount=selling_amount,
         cost_unit_price=cost_unit,
         cost_amount=cost_amount,
+        wht_pct=wht_pct,
+        wht_amount=wht_amount,
         margin_amount=margin_amount,
         margin_pct=margin_pct,
         commission_amount=commission_amount,
@@ -74,6 +91,7 @@ def invoice_rollup(line_items_df, invoice_no):
     return dict(
         selling_total=round(lines["selling_amount"].sum(), 2),
         cost_total=round(lines["cost_amount"].sum(), 2),
+        wht_total=round(lines["wht_amount"].sum(), 2) if "wht_amount" in lines else 0.0,
         margin_total=round(lines["margin_amount"].sum(), 2),
         commission_total=round(lines["commission_amount"].sum(), 2),
     )
@@ -144,4 +162,7 @@ def line_review_flags(row):
     margin = row.get("margin_amount")
     if margin is not None and not pd.isna(margin) and margin <= 0:
         reasons.append("zero/negative margin")
+    wht_pct = row.get("wht_pct")
+    if wht_pct is not None and not pd.isna(wht_pct) and wht_pct > 0:
+        reasons.append(f"WHT {wht_pct:g}% applied - verify")
     return reasons

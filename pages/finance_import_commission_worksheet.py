@@ -67,18 +67,24 @@ if st.session_state.get("commission_worksheet_imported"):
     mapped["cost_type_default"] = mapped["item_code"].apply(
         lambda c: "Professional service (choose Infra/HW or Apps)" if c == "PS" else "Standard"
     )
+    mapped["wht_pct"] = mapped["customer"].apply(mock_data.wht_rate_for_customer)
     st.dataframe(mapped, use_container_width=True, hide_index=True)
     st.caption(
         "`keyed_in_by` (the admin's own name/login) is shown for reference only - it isn't used "
-        "in any commission or salesperson logic."
+        "in any commission or salesperson logic. `wht_pct` is auto-detected from the customer "
+        "name (Thailand 5%, Taiwan 20%) - this worksheet's own `gross_profit`/`commission_amount` "
+        "columns are the raw pre-WHT figures as exported; Auto-Match & Extract recalculates both "
+        "net of WHT once imported."
     )
 
     ps_count = int((mapped["item_code"] == "PS").sum())
+    wht_count = int((mapped["wht_pct"] > 0).sum())
     st.success(
         f"{len(mapped)} line item(s) imported across {mapped['invoice_no'].nunique()} invoice(s) "
         f"- {ps_count} flagged as professional service (cost will use the %-rule, not this "
-        "worksheet's total cost). Go to **Import Sales Invoice List** next, which is also where "
-        "you'll scan the folder for invoice PDFs to link as a sanity check."
+        f"worksheet's total cost); {wht_count} flagged for withholding tax (Thailand/Taiwan) and "
+        "will need a manual double-check before approving. Go to **Import Sales Invoice List** "
+        "next, which is also where you'll scan the folder for invoice PDFs to link as a sanity check."
     )
 else:
     st.info("Upload a file (or click the sample button) to see the mapping and preview.")
