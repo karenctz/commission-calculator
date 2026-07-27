@@ -12,7 +12,7 @@ ensure_state()
 # user in the wrong role, since both groups are always shown here rather
 # than being hidden based on the current role.
 
-settings_page = st.Page("pages/settings.py", title="Settings (sign in)", icon=":material/settings:")
+settings_page = st.Page("pages/settings.py", title="Your Role (sign in)", icon=":material/settings:")
 
 finance_pages = [
     st.Page("pages/finance_continue_progress.py", title="Continue Where You Left Off", icon=":material/history:"),

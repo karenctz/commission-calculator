@@ -3,7 +3,7 @@ import streamlit as st
 import mock_data
 from state import ensure_state
 
-st.set_page_config(page_title="Settings", layout="wide")
+st.set_page_config(page_title="Your Role", layout="wide")
 ensure_state()
 
 st.title("Commission Calculator")
@@ -14,14 +14,13 @@ st.caption(
     "Use the sidebar to move between the **Finance** and **Salesperson** steps, grouped separately."
 )
 
-st.subheader("Settings")
+st.subheader("Your Role")
 st.caption(
     "Role/name here is self-declared (no real login), same as the real v1 will be. It's still "
     "what every other page uses to decide what you can see - try switching it and watch My "
     "Invoices / the Finance pages change."
 )
 
-st.subheader("Your role")
 role = st.radio(
     "Who are you signed in as?",
     options=["Finance", "Salesperson"],
