@@ -15,6 +15,8 @@ ensure_state()
 settings_page = st.Page("pages/settings.py", title="Settings (sign in)", icon=":material/settings:")
 
 finance_pages = [
+    st.Page("pages/finance_continue_progress.py", title="Continue Where You Left Off", icon=":material/history:"),
+    st.Page("pages/finance_export_progress.py", title="Export Progress", icon=":material/save:"),
     st.Page("pages/finance_import_commission_worksheet.py", title="1. Import Commission Worksheet", icon=":material/upload_file:"),
     st.Page("pages/finance_import_bc_invoices.py", title="2. Import Sales Invoice List + Scan Invoice PDFs", icon=":material/upload_file:"),
     st.Page("pages/finance_import_po_list.py", title="3. Import PO List + Scan PO PDFs", icon=":material/upload_file:"),

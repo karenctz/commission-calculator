@@ -1,6 +1,5 @@
 import streamlit as st
 
-import exchange
 import mock_data
 from state import ensure_state
 
@@ -54,37 +53,11 @@ if role == "Salesperson":
 else:
     st.info(
         "Finance sees the Import/Auto-Match/Export-for-Salesperson/Import-Updates/"
-        "Finance Approval/Export pages, across every salesperson at once.",
+        "Finance Approval/Export pages, across every salesperson at once. Nothing persists "
+        "automatically between sessions - use **Continue Where You Left Off** / "
+        "**Export Progress** at the top of the Finance section to save/reload your work.",
         icon="🗂️",
     )
-
-    st.divider()
-    st.subheader("Continue where you left off")
-    st.caption(
-        "Nothing persists automatically yet - this app doesn't have (or need) a database, but "
-        "that does mean your approvals/paid flags/edits only live in this browser session. "
-        "**Download your progress before closing this session**, and load it back here next time "
-        "- otherwise you start over from the BC/PO/Worksheet imports with everything back to "
-        "not-yet-reviewed."
-    )
-    p1, p2 = st.columns(2)
-    with p1:
-        progress_file = st.file_uploader(
-            "Load a previously saved progress file (.xlsx)", type=["xlsx"], key="progress_upload",
-        )
-        if progress_file:
-            inv, lines = exchange.read_export(progress_file.read())
-            st.session_state["invoices"] = inv
-            st.session_state["line_items"] = lines
-            st.success(f"Loaded {len(inv)} invoice(s) from your saved progress file.")
-    with p2:
-        st.download_button(
-            "Download current progress (.xlsx)",
-            data=exchange.write_workbook(st.session_state["invoices"], st.session_state["line_items"]),
-            file_name="commission_progress.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            help="Grab this before you close the app - reload it here next time to pick up where you left off.",
-        )
 
 st.divider()
 st.subheader("What this will do once real")
