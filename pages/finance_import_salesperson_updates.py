@@ -39,7 +39,7 @@ if updated_invoices is not None:
         use_container_width=True, hide_index=True,
     )
 
-    if st.button("Merge into master dataset"):
+    if st.button("Import salesperson updates into master records"):
         merged_inv, merged_lines, warnings = exchange.merge_salesperson_update(
             st.session_state["invoices"], st.session_state["line_items"],
             updated_invoices, updated_line_items,
