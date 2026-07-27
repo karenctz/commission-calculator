@@ -15,6 +15,8 @@ import io
 import pandas as pd
 from openpyxl import load_workbook
 
+import mock_data
+
 
 def write_workbook(invoices, line_items):
     """Writes already-scoped invoices/line_items to .xlsx bytes - shared by
@@ -33,6 +35,17 @@ def build_export(invoices, line_items, salesperson):
     inv_slice = invoices[invoices["salesperson"] == salesperson].copy()
     line_slice = line_items[line_items["invoice_no"].isin(inv_slice["invoice_no"])].copy()
     return write_workbook(inv_slice, line_slice)
+
+
+def sample_export_for(salesperson):
+    """Builds a demo/prototype 'use a sample file' shortcut for My Invoices -
+    recomputes fresh from mock_data's canned sample invoices rather than
+    reading a live Finance session's master dataset. A Salesperson session
+    must never touch Finance's master state, even for a sample-data
+    shortcut - see the isolation note in state.ensure_state()."""
+    invoices = mock_data.seed_invoices()
+    line_items = mock_data.seed_line_items()
+    return build_export(invoices, line_items, salesperson)
 
 
 def read_export(file_bytes):

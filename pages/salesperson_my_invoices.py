@@ -35,9 +35,7 @@ if session_key not in st.session_state:
         st.session_state[lines_key] = lines
         st.rerun()
     elif use_sample:
-        master_inv = st.session_state["invoices"]
-        master_lines = st.session_state["line_items"]
-        xlsx_bytes = exchange.build_export(master_inv, master_lines, me)
+        xlsx_bytes = exchange.sample_export_for(me)
         inv, lines = exchange.read_export(xlsx_bytes)
         st.session_state[session_key] = inv
         st.session_state[lines_key] = lines

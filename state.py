@@ -20,10 +20,6 @@ _METRIC_CSS = """
 
 def ensure_state():
     st.markdown(_METRIC_CSS, unsafe_allow_html=True)
-    if "invoices" not in st.session_state:
-        st.session_state["invoices"] = mock_data.seed_invoices()
-    if "line_items" not in st.session_state:
-        st.session_state["line_items"] = mock_data.seed_line_items()
     if "bc_imported" not in st.session_state:
         st.session_state["bc_imported"] = False
     if "po_list_imported" not in st.session_state:
@@ -32,6 +28,22 @@ def ensure_state():
         st.session_state["role"] = "Finance"
     if "current_salesperson" not in st.session_state:
         st.session_state["current_salesperson"] = mock_data.SALESPEOPLE[0]
+
+    # The master invoices/line_items (every salesperson's data at once) may
+    # only ever exist in a Finance session - this is the actual privacy
+    # boundary once this app is hosted centrally rather than run locally per
+    # person, not just page-level gating (require_finance()/require_salesperson()
+    # hide pages, but hidden isn't the same as absent). A Salesperson session
+    # must never hold it, so it's dropped immediately if present - covers
+    # the demo-only case of switching roles mid-session in this prototype.
+    if current_role() == "Finance":
+        if "invoices" not in st.session_state:
+            st.session_state["invoices"] = mock_data.seed_invoices()
+        if "line_items" not in st.session_state:
+            st.session_state["line_items"] = mock_data.seed_line_items()
+    else:
+        st.session_state.pop("invoices", None)
+        st.session_state.pop("line_items", None)
 
 
 def current_role():
