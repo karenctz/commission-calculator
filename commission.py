@@ -93,10 +93,13 @@ def confidence_badge(score):
 
 def invoice_rollup(line_items_df, invoice_no):
     lines = line_items_df[line_items_df["invoice_no"] == invoice_no]
+    selling_total = round(lines["selling_amount"].sum(), 2)
+    wht_total = round(lines["wht_amount"].sum(), 2) if "wht_amount" in lines else 0.0
     return dict(
-        selling_total=round(lines["selling_amount"].sum(), 2),
+        selling_total=selling_total,
+        selling_total_excl_wht=round(selling_total - wht_total, 2),
         cost_total=round(lines["cost_amount"].sum(), 2),
-        wht_total=round(lines["wht_amount"].sum(), 2) if "wht_amount" in lines else 0.0,
+        wht_total=wht_total,
         margin_total=round(lines["margin_amount"].sum(), 2),
         commission_total=round(lines["commission_amount"].sum(), 2),
     )

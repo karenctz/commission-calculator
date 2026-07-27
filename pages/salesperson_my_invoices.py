@@ -187,15 +187,12 @@ for invoice_no, inv in sorted_invoices.iterrows():
 
         rollup = commission.invoice_rollup(st.session_state[lines_key], invoice_no)
         with summary_slot:
-            if rollup["wht_total"]:
-                m1, m2, m3, m4, m5, _spacer = st.columns([1, 1, 1, 1, 1, 3])
-                m5.markdown(f"**WHT**  \n${rollup['wht_total']:,.2f}")
-            else:
-                m1, m2, m3, m4, _spacer = st.columns([1, 1, 1, 1, 4])
-            m1.markdown(f"**Selling**  \n${rollup['selling_total']:,.2f}")
-            m2.markdown(f"**Cost**  \n${rollup['cost_total']:,.2f}")
-            m3.markdown(f"**Margin**  \n${rollup['margin_total']:,.2f}")
-            m4.markdown(f"**Commission**  \n${rollup['commission_total']:,.2f}")
+            m1, m2, m3, m4, m5, _spacer = st.columns([1, 1, 1, 1, 1, 3])
+            m1.markdown(f"**Selling (incl. WHT)**  \n${rollup['selling_total']:,.2f}")
+            m2.markdown(f"**Selling (excl. WHT)**  \n${rollup['selling_total_excl_wht']:,.2f}")
+            m3.markdown(f"**Cost**  \n${rollup['cost_total']:,.2f}")
+            m4.markdown(f"**Margin**  \n${rollup['margin_total']:,.2f}")
+            m5.markdown(f"**Commission**  \n${rollup['commission_total']:,.2f}")
 
 st.divider()
 st.info("Once you're done, head to **Export My Updates** to send everything back to Finance.", icon="📤")
